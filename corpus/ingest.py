@@ -23,15 +23,10 @@ from elasticsearch import Elasticsearch, helpers
 
 INDEX_NAME = "aiewf-workshop-docs"
 
-# EIS inference endpoint for Jina v5 text embedding (Serverless default)
-INFERENCE_ID = ".multilingual-e5-small"  # fallback; see note below
-
-# NOTE: On Elastic Serverless, jina-embeddings-v5-text-small is available via EIS.
-# The inference_id is typically ".jina-embeddings-v5-text-small" on a project that
-# has EIS enabled. If you get a 404 on the inference endpoint, check:
-#   GET _inference
-# and use the id for the Jina v5 embedding model. The semantic_text field will
-# auto-call EIS at both index time and query time — no client-side embedding needed.
+# Jina v5 inference ID is auto-detected at runtime via detect_jina_inference_id().
+# If detection fails it falls back to this well-known ID. Run GET _inference in
+# Dev Console to verify which endpoint IDs exist on your Serverless project.
+_JINA_INFERENCE_ID_FALLBACK = ".jina-embeddings-v5-text-small"
 
 DOCS_FILE = Path(__file__).parent / "docs.json"
 
@@ -72,13 +67,29 @@ INDEX_MAPPING = {
             }
         }
     },
-    "settings": {
-        "number_of_shards": 1,
-        "number_of_replicas": 0
-    }
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
+
+def detect_jina_inference_id(es: Elasticsearch) -> str:
+    """Find the Jina v5 embedding inference endpoint on this Serverless project."""
+    print("Detecting Jina v5 embedding inference endpoint...")
+    try:
+        resp = es.inference.get(inference_id="_all")
+        for ep in resp.get("endpoints", []):
+            eid = ep.get("inference_id", "")
+            if "jina" in eid and ("embed" in eid or "text" in eid):
+                print(f"  Found: {eid}")
+                return eid
+        print("  No Jina embedding endpoint found. Available endpoints:")
+        for ep in resp.get("endpoints", []):
+            print(f"    {ep.get('inference_id')}")
+    except Exception as exc:
+        print(f"  Could not query inference endpoints: {exc}")
+    print(f"  Using fallback: {_JINA_INFERENCE_ID_FALLBACK}")
+    print("  If indexing fails, run 'GET _inference' in Dev Console to check available IDs.")
+    return _JINA_INFERENCE_ID_FALLBACK
+
 
 def get_client() -> Elasticsearch:
     endpoint = os.environ.get("ES_ENDPOINT")
@@ -97,14 +108,20 @@ def get_client() -> Elasticsearch:
     )
 
 
-def create_index(es: Elasticsearch) -> None:
+def create_index(es: Elasticsearch, inference_id: str) -> None:
     if es.indices.exists(index=INDEX_NAME):
         print(f"Index '{INDEX_NAME}' already exists. Deleting and recreating...")
         es.indices.delete(index=INDEX_NAME)
 
-    print(f"Creating index '{INDEX_NAME}'...")
-    es.indices.create(index=INDEX_NAME, body=INDEX_MAPPING)
-    print(f"Index created.")
+    mapping = json.loads(json.dumps(INDEX_MAPPING))
+    mapping["mappings"]["properties"]["body_semantic"]["inference_id"] = inference_id
+
+    print(f"Creating index '{INDEX_NAME}' with inference_id='{inference_id}'...")
+    es.indices.create(
+        index=INDEX_NAME,
+        mappings=mapping["mappings"],
+    )
+    print("Index created.")
 
 
 def load_docs() -> list[dict]:
@@ -170,24 +187,25 @@ def verify(es: Elasticsearch) -> None:
 
     count = es.count(index=INDEX_NAME)["count"]
     print(f"\nVerification: {count} documents in index.")
+    if count == 0:
+        print("ERROR: 0 documents indexed — ingest failed. Check logs above.")
+        sys.exit(1)
 
     print("\nRunning test semantic query: 'securing cluster traffic'...")
     result = es.search(
         index=INDEX_NAME,
-        body={
-            "retriever": {
-                "standard": {
-                    "query": {
-                        "semantic": {
-                            "field": "body_semantic",
-                            "query": "securing cluster traffic"
-                        }
+        retriever={
+            "standard": {
+                "query": {
+                    "semantic": {
+                        "field": "body_semantic",
+                        "query": "securing cluster traffic"
                     }
                 }
-            },
-            "size": 3,
-            "_source": ["id", "title", "trap_type"]
-        }
+            }
+        },
+        size=3,
+        source=["id", "title", "trap_type"],
     )
     hits = result["hits"]["hits"]
     print(f"Top {len(hits)} results:")
@@ -199,12 +217,12 @@ def verify(es: Elasticsearch) -> None:
 def main():
     es = get_client()
 
-    # Verify connection
     info = es.info()
     print(f"Connected to Elasticsearch {info['version']['number']}")
 
+    inference_id = detect_jina_inference_id(es)
     docs = load_docs()
-    create_index(es)
+    create_index(es, inference_id)
     bulk_index(es, docs)
     verify(es)
 

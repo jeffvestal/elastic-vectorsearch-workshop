@@ -1,0 +1,80 @@
+#!/bin/bash
+# Lab 1 setup — runs on kubernetes-vm
+# 1. Provisions Elastic Serverless (vector-optimized) via start_serverless.sh
+# 2. Stores credentials as Instruqt agent variables for all challenges
+# 3. Installs Python deps, clones repo, ingests corpus
+# 4. Starts Jupyter server on :8888 for Lab 4 notebook tab
+#
+# Lab 4 LLM synthesis (Cell 7) uses the LiteLLM proxy pre-loaded in the preset.
+# LLM_PROXY_URL is injected automatically by the preset bootstrap — no manual config needed.
+# Supported models include claude-sonnet-4 via SA_LLM_PROXY_BEARER_TOKEN.
+set -euo pipefail
+
+echo "=== Provisioning Elastic Serverless (vector-optimized) ==="
+/opt/workshops/start_serverless.sh \
+  --project-type elasticsearch \
+  --optimized-for vector
+
+# Extract credentials from the provisioning output
+ES_URL=$(jq -r '.["aws-us-east-1"].endpoints.elasticsearch' /tmp/project_results.json)
+ES_APIKEY=$(jq -r '.["aws-us-east-1"].credentials.api_key' /tmp/project_results.json)
+ES_KIBANA=$(jq -r '.["aws-us-east-1"].endpoints.kibana' /tmp/project_results.json)
+
+# Store for all challenges via Instruqt agent variables
+agent variable set ES_ENDPOINT "$ES_URL"
+agent variable set ES_API_KEY "$ES_APIKEY"
+agent variable set ES_KIBANA_URL "$ES_KIBANA"
+
+export ES_ENDPOINT="$ES_URL"
+export ES_API_KEY="$ES_APIKEY"
+
+echo "ES:     $ES_URL"
+echo "Kibana: $ES_KIBANA"
+echo "Kibana also proxied at http://localhost:30001 (NGINX)"
+
+echo "=== Installing Python dependencies ==="
+# elasticsearch pinned <9: body= kwargs still work, avoids 9.x breaking API changes
+pip install --quiet 'elasticsearch>=8.17,<9' jupyter anthropic
+
+echo "=== Cloning workshop repo ==="
+git clone --depth=1 https://github.com/jeffvestal/elastic-vectorsearch-workshop.git /root/workshop
+
+echo "=== Ingesting corpus ==="
+cd /root/workshop/corpus
+python3 ingest.py
+
+echo "=== Setting up notebook ==="
+mkdir -p /root/lab4
+cp /root/workshop/instruqt/why-it-matters/lab4.ipynb /root/lab4/
+
+echo "=== Starting Jupyter server on :8888 ==="
+# Env vars exported above are inherited by the Jupyter process and its kernels.
+# Token and password auth disabled — sandbox is network-isolated.
+nohup jupyter notebook \
+  --ip=0.0.0.0 \
+  --port=8888 \
+  --no-browser \
+  --NotebookApp.token='' \
+  --NotebookApp.password='' \
+  --NotebookApp.allow_origin='*' \
+  --NotebookApp.disable_check_xsrf=True \
+  --notebook-dir=/root/lab4 \
+  >> /var/log/jupyter.log 2>&1 &
+
+echo "=== Health check ==="
+sleep 3
+DOC_COUNT=$(python3 -c "
+from elasticsearch import Elasticsearch
+import os, sys
+es = Elasticsearch(os.environ['ES_ENDPOINT'], api_key=os.environ['ES_API_KEY'])
+print(es.count(index='aiewf-workshop-docs')['count'])
+")
+if [ "$DOC_COUNT" -eq 0 ]; then
+    echo "ERROR: 0 documents in index — ingest failed. Check output above."
+    exit 1
+fi
+echo "Index: $DOC_COUNT documents OK"
+
+echo "=== Setup complete ==="
+echo "Kibana: http://kubernetes-vm:30001"
+echo "Jupyter: http://kubernetes-vm:8888 (no auth)"
