@@ -33,15 +33,15 @@ echo "Kibana: $ES_KIBANA"
 echo "Kibana also proxied at http://localhost:30001 (NGINX)"
 
 echo "=== Installing Python dependencies ==="
-# elasticsearch pinned <9: body= kwargs still work, avoids 9.x breaking API changes
-pip install --quiet 'elasticsearch>=8.17,<9' jupyter anthropic
+pip install 'elasticsearch>=8.17,<9' jupyter anthropic
+python3 -c "import elasticsearch; print('elasticsearch client:', elasticsearch.__version__)"
 
 echo "=== Cloning workshop repo ==="
 git clone --depth=1 https://github.com/jeffvestal/elastic-vectorsearch-workshop.git /root/workshop
 
 echo "=== Ingesting corpus ==="
 cd /root/workshop/corpus
-python3 ingest.py
+python3 ingest.py 2>&1
 
 echo "=== Setting up notebook ==="
 mkdir -p /root/lab4
