@@ -45,7 +45,7 @@ python3 ingest.py 2>&1
 
 echo "=== Setting up notebook ==="
 mkdir -p /root/lab4
-cp /root/workshop/instruqt/why-it-matters/lab4.ipynb /root/lab4/
+cp /root/workshop/instruqt/04-why-it-matters/lab4.ipynb /root/lab4/
 
 echo "=== Starting Jupyter server on :8888 ==="
 # Env vars exported above are inherited by the Jupyter process and its kernels.
