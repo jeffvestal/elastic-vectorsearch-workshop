@@ -48,20 +48,36 @@ mkdir -p /root/lab4
 cp /root/workshop/instruqt/04-why-it-matters/lab4.ipynb /root/lab4/
 
 echo "=== Starting Jupyter server on :8888 ==="
-# Env vars exported above are inherited by the Jupyter process and its kernels.
 # Token and password auth disabled — sandbox is network-isolated.
 nohup jupyter notebook \
   --ip=0.0.0.0 \
   --port=8888 \
   --no-browser \
+  --allow-root \
   --NotebookApp.token='' \
   --NotebookApp.password='' \
   --NotebookApp.allow_origin='*' \
   --NotebookApp.disable_check_xsrf=True \
+  --ServerApp.token='' \
+  --ServerApp.password='' \
+  --ServerApp.allow_origin='*' \
+  --ServerApp.disable_check_xsrf=True \
   --notebook-dir=/root/lab4 \
   >> /var/log/jupyter.log 2>&1 &
 
 echo "=== Health check ==="
+# Wait for Jupyter to bind port 8888 (up to 15s)
+for i in $(seq 1 15); do
+  if curl -sf http://localhost:8888/api >/dev/null 2>&1; then
+    echo "Jupyter ready after ${i}s"
+    break
+  fi
+  sleep 1
+done
+if ! curl -sf http://localhost:8888/api >/dev/null 2>&1; then
+  echo "WARNING: Jupyter did not start — check /var/log/jupyter.log"
+  tail -20 /var/log/jupyter.log || true
+fi
 sleep 3
 DOC_COUNT=$(python3 -c "
 from elasticsearch import Elasticsearch
