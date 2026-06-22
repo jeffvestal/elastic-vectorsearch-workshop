@@ -12,7 +12,6 @@ Requirements:
     pip install elasticsearch
 """
 
-import json
 import os
 import sys
 from pathlib import Path
@@ -22,11 +21,6 @@ from elasticsearch import Elasticsearch, helpers
 # ─── Configuration ────────────────────────────────────────────────────────────
 
 INDEX_NAME = "aiewf-workshop-docs"
-
-# Jina v5 inference ID is auto-detected at runtime via detect_jina_inference_id().
-# If detection fails it falls back to this well-known ID. Run GET _inference in
-# Dev Console to verify which endpoint IDs exist on your Serverless project.
-_JINA_INFERENCE_ID_FALLBACK = ".jina-embeddings-v5-text-small"
 
 DOCS_FILE = Path(__file__).parent / "docs.json"
 
@@ -50,11 +44,9 @@ INDEX_MAPPING = {
             "body": {
                 "type": "text"
             },
-            # semantic_text field — ES sends text to EIS → Jina v5 → vector at index + query time
-            # No client-side embedding code needed. The inference_id wires up EIS automatically.
+            # semantic_text auto-assigns .jina-embeddings-v5-text-small on Serverless — no inference_id needed
             "body_semantic": {
-                "type": "semantic_text",
-                "inference_id": ".jina-embeddings-v5-text-small"
+                "type": "semantic_text"
             },
             "product": {
                 "type": "keyword"
@@ -70,31 +62,6 @@ INDEX_MAPPING = {
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
-
-def detect_jina_inference_id(es: Elasticsearch) -> str:
-    """Find the Jina v5 embedding inference endpoint on this Serverless project."""
-    print("Detecting Jina v5 embedding inference endpoint...")
-    try:
-        resp = es.inference.get(inference_id="_all")
-        endpoints = [ep.get("inference_id", "") for ep in resp.get("endpoints", [])]
-        # Prefer v5 explicitly; fall back to any Jina embedding endpoint
-        for eid in endpoints:
-            if "jina" in eid and "v5" in eid:
-                print(f"  Found v5: {eid}")
-                return eid
-        for eid in endpoints:
-            if "jina" in eid and ("embed" in eid or "text" in eid):
-                print(f"  Found (non-v5): {eid}")
-                return eid
-        print("  No Jina embedding endpoint found. Available endpoints:")
-        for eid in endpoints:
-            print(f"    {eid}")
-    except Exception as exc:
-        print(f"  Could not query inference endpoints: {exc}")
-    print(f"  Using fallback: {_JINA_INFERENCE_ID_FALLBACK}")
-    print("  If indexing fails, run 'GET _inference' in Dev Console to check available IDs.")
-    return _JINA_INFERENCE_ID_FALLBACK
-
 
 def get_client() -> Elasticsearch:
     endpoint = os.environ.get("ES_ENDPOINT")
@@ -113,18 +80,15 @@ def get_client() -> Elasticsearch:
     )
 
 
-def create_index(es: Elasticsearch, inference_id: str) -> None:
+def create_index(es: Elasticsearch) -> None:
     if es.indices.exists(index=INDEX_NAME):
         print(f"Index '{INDEX_NAME}' already exists. Deleting and recreating...")
         es.indices.delete(index=INDEX_NAME)
 
-    mapping = json.loads(json.dumps(INDEX_MAPPING))
-    mapping["mappings"]["properties"]["body_semantic"]["inference_id"] = inference_id
-
-    print(f"Creating index '{INDEX_NAME}' with inference_id='{inference_id}'...")
+    print(f"Creating index '{INDEX_NAME}'...")
     es.indices.create(
         index=INDEX_NAME,
-        mappings=mapping["mappings"],
+        mappings=INDEX_MAPPING["mappings"],
     )
     print("Index created.")
 
@@ -225,9 +189,8 @@ def main():
     info = es.info()
     print(f"Connected to Elasticsearch {info['version']['number']}")
 
-    inference_id = detect_jina_inference_id(es)
     docs = load_docs()
-    create_index(es, inference_id)
+    create_index(es)
     bulk_index(es, docs)
     verify(es)
 
