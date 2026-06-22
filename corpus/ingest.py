@@ -76,14 +76,19 @@ def detect_jina_inference_id(es: Elasticsearch) -> str:
     print("Detecting Jina v5 embedding inference endpoint...")
     try:
         resp = es.inference.get(inference_id="_all")
-        for ep in resp.get("endpoints", []):
-            eid = ep.get("inference_id", "")
+        endpoints = [ep.get("inference_id", "") for ep in resp.get("endpoints", [])]
+        # Prefer v5 explicitly; fall back to any Jina embedding endpoint
+        for eid in endpoints:
+            if "jina" in eid and "v5" in eid:
+                print(f"  Found v5: {eid}")
+                return eid
+        for eid in endpoints:
             if "jina" in eid and ("embed" in eid or "text" in eid):
-                print(f"  Found: {eid}")
+                print(f"  Found (non-v5): {eid}")
                 return eid
         print("  No Jina embedding endpoint found. Available endpoints:")
-        for ep in resp.get("endpoints", []):
-            print(f"    {ep.get('inference_id')}")
+        for eid in endpoints:
+            print(f"    {eid}")
     except Exception as exc:
         print(f"  Could not query inference endpoints: {exc}")
     print(f"  Using fallback: {_JINA_INFERENCE_ID_FALLBACK}")
