@@ -1,0 +1,142 @@
+slug: aiewf-2026-vector-hybrid-search
+id: aiewf2026vhs
+title: "Vector → Hybrid → Do You Even Need a Model?"
+teaser: >
+  Build a production-grade hybrid search pipeline — vector + BM25 + RRF — and prove that
+  retrieval quality, not model quality, determines answer quality in RAG systems.
+description: |
+  In this 2-hour hands-on workshop you'll go from pure vector search to a production hybrid
+  retriever, learning exactly where each approach succeeds and fails.
+
+  The thesis: most of a RAG pipeline is a database problem, not a model problem.
+
+  - Challenge 1: Vector Search — run semantic queries, learn how Elastic Inference Service
+    (EIS) generates embeddings server-side via Jina v5. No client-side embedding code.
+  - Challenge 2: Where Vector Breaks — adversarial queries that expose pure vector's blind
+    spots. BM25 rescue. Then BM25's own vocabulary-mismatch gap.
+  - Challenge 3: Hybrid Search — compose BM25 + semantic under an RRF retriever, then a
+    linear retriever with MinMax normalization. Build the retriever that wins on all query types.
+  - Challenge 4: Why It Matters for Agents — wire the hybrid retriever to an LLM synthesis
+    call. Compare good context vs. bad context. "The model didn't get dumber. The retrieval got worse."
+
+  Attendees leave with a reference GitHub repo: pre-baked corpus, ingest script, all Dev
+  Console snippets, and a working Python RAG notebook.
+
+icon: ""
+tags:
+- search
+- elasticsearch
+- hybrid-search
+- vector-search
+- semantic-search
+- retriever
+- rrf
+- rag
+- ai-search
+- aiewf-2026
+owner: elastic
+developers:
+- jeff.vestal@elastic.co
+show_timer: true
+idle_timeout: 10800
+timelimit: 10800
+
+# Sandbox: Elastic Serverless (Elasticsearch + Kibana)
+# Uses managed-vm-elastic-9-4-0 preset which provides a Kibana tab with Dev Console access.
+# NOTE: verify this sandbox_preset is available in the Instruqt Elastic org before publishing.
+# If a newer Serverless preset is available, update this.
+sandbox_preset: managed-vm-elastic-9-4-0
+
+lab_config:
+  extend_ttl: 10800
+  sidebar_enabled: true
+  feedback_recap_enabled: true
+  feedback_tab_enabled: false
+  loadingMessages: true
+  theme:
+    name: modern-dark
+  override_challenge_layout: false
+  hideStopButton: false
+
+# HARD GATE (pre-event): Verify whether Instruqt can expose a notebook tab alongside Kibana
+# against one Serverless project. Lab 4's assignment.md has a notebook tab configured — if
+# the sandbox does not support it, remove the notebook tab from Lab 4's assignment.md and
+# deliver Lab 4 as instructor-driven on screen.
+# See workshops/aiewf-2026/README.md → "Pre-Event Checklist" for details.
+
+challenges:
+- slug: vector-search
+  id: aiewf2026-lab1
+  type: challenge
+  title: "Lab 1 — Vector Search: The Thing Everyone Reaches For"
+  teaser: Run your first semantic queries. Learn how Jina v5 via EIS generates embeddings
+    server-side — no client embedding code needed.
+  assignment: 01-vector-search/assignment.md
+  tabs:
+  - id: kibana-console
+    title: Kibana Dev Console
+    type: service
+    hostname: serverless
+    path: /app/dev_tools#/console
+    port: 443
+  difficulty: basic
+  timelimit: 1800
+
+- slug: where-vector-breaks
+  id: aiewf2026-lab2
+  type: challenge
+  title: "Lab 2 — Where Vector Breaks (and Lexical's Own Gap)"
+  teaser: Break the Lab 1 high. Discover where pure semantic search fails on exact tokens.
+    BM25 rescues it — then falls on paraphrases. Both methods are weak where the other is strong.
+  assignment: 02-where-vector-breaks/assignment.md
+  tabs:
+  - id: kibana-console
+    title: Kibana Dev Console
+    type: service
+    hostname: serverless
+    path: /app/dev_tools#/console
+    port: 443
+  difficulty: basic
+  timelimit: 1800
+
+- slug: hybrid-search
+  id: aiewf2026-lab3
+  type: challenge
+  title: "Lab 3 — Hybrid: Best of Both (RRF + Linear Combination)"
+  teaser: Compose BM25 and semantic under an RRF retriever. Then try linear combination with
+    MinMax normalization. Build the production-grade hybrid retriever that wins on all query types.
+  assignment: 03-hybrid-search/assignment.md
+  tabs:
+  - id: kibana-console
+    title: Kibana Dev Console
+    type: service
+    hostname: serverless
+    path: /app/dev_tools#/console
+    port: 443
+  difficulty: intermediate
+  timelimit: 1800
+
+- slug: why-it-matters
+  id: aiewf2026-lab4
+  type: challenge
+  title: "Lab 4 — Why It Matters for Agents: Do You Even Need a Model?"
+  teaser: Wire the Lab 3 hybrid retriever to an LLM. Prove that retrieval quality — not
+    model quality — determines answer quality. Most of a RAG pipeline is a database problem.
+  assignment: 04-why-it-matters/assignment.md
+  tabs:
+  - id: kibana-console
+    title: Kibana Dev Console
+    type: service
+    hostname: serverless
+    path: /app/dev_tools#/console
+    port: 443
+  - id: notebook
+    title: Python Notebook
+    type: service
+    hostname: host-1
+    path: /
+    port: 8888
+    # NOTE: Remove this tab if the sandbox does not support notebook-server alongside Kibana.
+    # Verify before event. See README.md → "HARD GATE: Instruqt notebook-tab availability"
+  difficulty: intermediate
+  timelimit: 1800
