@@ -17,4 +17,118 @@ difficulty: intermediate
 timelimit: 1800
 enhanced_loading: null
 ---
-hybrid-search/assignment.md
+# Lab 3 — Hybrid: Best of Both (RRF + Linear Combination)
+
+**Goal:** Compose BM25 + semantic into a single retriever that wins on all query types from Labs 1 & 2.
+
+---
+
+## Part A — RRF Hybrid Retriever
+
+RRF (Reciprocal Rank Fusion) combines ranked lists without needing score normalization.
+
+```
+GET aiewf-workshop-docs/_search
+{
+  "retriever": {
+    "rrf": {
+      "retrievers": [
+        {
+          "standard": {
+            "query": {
+              "multi_match": {
+                "query": "user can't log in",
+                "fields": ["title^3", "body"],
+                "type": "best_fields"
+              }
+            }
+          }
+        },
+        {
+          "standard": {
+            "query": {
+              "semantic": {
+                "field": "body_semantic",
+                "query": "user can't log in"
+              }
+            }
+          }
+        }
+      ],
+      "rank_constant": 60,
+      "rank_window_size": 100
+    }
+  },
+  "size": 5,
+  "_source": ["id", "title", "trap_type"]
+}
+```
+
+**Test it against Lab 2's hard queries** — change `"user can't log in"` in BOTH sub-retrievers to:
+- `"exit code 137"` — should now find the right doc (BM25 sub-retriever wins)
+- `"user can't log in"` — should find SAML doc (semantic sub-retriever wins)
+
+The hybrid wins on both.
+
+---
+
+## Part B — Linear Retriever with MinMax Normalization
+
+Linear combination lets you tune weights per sub-retriever:
+
+```
+GET aiewf-workshop-docs/_search
+{
+  "retriever": {
+    "linear": {
+      "retrievers": [
+        {
+          "retriever": {
+            "standard": {
+              "query": {
+                "multi_match": {
+                  "query": "user can't log in",
+                  "fields": ["title^3", "body"],
+                  "type": "best_fields"
+                }
+              }
+            }
+          },
+          "weight": 0.5
+        },
+        {
+          "retriever": {
+            "standard": {
+              "query": {
+                "semantic": {
+                  "field": "body_semantic",
+                  "query": "user can't log in"
+                }
+              }
+            }
+          },
+          "weight": 0.5
+        }
+      ],
+      "normalizer": "minmax",
+      "rank_window_size": 100
+    }
+  },
+  "size": 5,
+  "_source": ["id", "title"]
+}
+```
+
+Try shifting weights — `0.8` BM25 / `0.2` semantic for exact-token-heavy workloads.
+
+---
+
+## RRF vs Linear
+
+| | RRF | Linear |
+|---|---|---|
+| Normalization | Not needed (rank-based) | MinMax built-in |
+| Tuning | None required | Weights per sub-retriever |
+| Production default | Yes | When you have calibrated weights |
+
+**Next lab:** wire this retriever to an LLM and prove retrieval quality determines answer quality.
