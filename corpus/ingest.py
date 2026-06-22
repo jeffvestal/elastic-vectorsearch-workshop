@@ -12,6 +12,7 @@ Requirements:
     pip install elasticsearch
 """
 
+import json
 import os
 import sys
 from pathlib import Path
