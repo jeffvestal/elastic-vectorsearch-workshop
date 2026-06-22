@@ -31,7 +31,7 @@ enhanced_loading: null
 
 **Goal:** Find the queries where semantic search fails. Rescue them with BM25. Then find where BM25 fails too.
 
----
+***
 
 ## Part A — Break vector search with exact tokens
 
@@ -61,7 +61,7 @@ Also try:
 
 **Expected behavior:** wrong or irrelevant docs at rank 1. Vector can't distinguish `137` from `136`.
 
----
+***
 
 ## Part B — BM25 rescues exact tokens
 
@@ -88,7 +88,7 @@ GET aiewf-workshop-docs/_search
 
 BM25 wins here — exact token match, TF-IDF scoring, right doc at rank 1.
 
----
+***
 
 ## Part C — Now break BM25 with a paraphrase
 
@@ -133,7 +133,7 @@ GET aiewf-workshop-docs/_search
 ```
 Expected: that doc is NOT in top 5. No matching tokens = zero BM25 score.
 
----
+***
 
 ## The Core Tension
 

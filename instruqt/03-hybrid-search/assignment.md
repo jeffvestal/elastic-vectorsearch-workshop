@@ -31,7 +31,7 @@ enhanced_loading: null
 
 **Goal:** Compose BM25 + semantic into a single retriever that wins on all query types from Labs 1 & 2.
 
----
+***
 
 ## Part A — RRF Hybrid Retriever
 
@@ -80,7 +80,7 @@ GET aiewf-workshop-docs/_search
 
 The hybrid wins on both.
 
----
+***
 
 ## Part B — Linear Retriever with MinMax Normalization
 
@@ -131,7 +131,7 @@ GET aiewf-workshop-docs/_search
 
 Try shifting weights — `0.8` BM25 / `0.2` semantic for exact-token-heavy workloads.
 
----
+***
 
 ## RRF vs Linear
 

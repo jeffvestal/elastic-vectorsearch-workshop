@@ -39,7 +39,7 @@ enhanced_loading: null
 
 Open the **Python Notebook** tab and run the cells in order.
 
----
+***
 
 ## What the notebook does
 
@@ -53,7 +53,7 @@ Open the **Python Notebook** tab and run the cells in order.
 
 **Cell 7 — [INSTRUCTOR DEMO]:** Live hybrid retrieval → synthesis. Runs the Lab 3 RRF retriever, feeds real retrieved docs to the LLM, calls Claude via the workshop LLM proxy.
 
----
+***
 
 ## The thesis
 
@@ -61,7 +61,7 @@ Open the **Python Notebook** tab and run the cells in order.
 
 In a RAG system, answer quality is bounded by retrieval quality. A better model cannot compensate for bad context. Most of a RAG pipeline is a **database problem**, not a model problem.
 
----
+***
 
 ## Take-home cells
 

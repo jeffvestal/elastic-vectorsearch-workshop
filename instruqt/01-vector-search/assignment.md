@@ -30,7 +30,7 @@ enhanced_loading: null
 
 **Goal:** Run semantic queries against a pre-indexed corpus of Elastic docs. See how Jina v5 via EIS embeds your query server-side — no client embedding code required.
 
----
+***
 
 ## Step 1 — Inspect the index mapping
 
@@ -42,7 +42,7 @@ Look for:
 - `body_semantic.type` = `"semantic_text"`
 - `body_semantic.inference_id` — this wires the field to the Jina v5 EIS endpoint
 
----
+***
 
 ## Step 2 — Inspect the EIS inference endpoint
 
@@ -52,7 +52,7 @@ GET _inference
 
 Find the Jina embedding endpoint. Notice `service: "elastic"` — this is EIS infrastructure, not an external API call.
 
----
+***
 
 ## Step 3 — Run a semantic query
 
@@ -76,7 +76,7 @@ GET aiewf-workshop-docs/_search
 
 The word **"TLS"** doesn't appear in the query — but the top result should be the TLS cluster communications page. That's semantic matching.
 
----
+***
 
 ## Step 4 — Try more queries
 
@@ -86,7 +86,7 @@ Swap the `"query"` string and re-run:
 - `"users can't connect to Kibana"` → should return Kibana network/access docs
 - Your own question about Elasticsearch
 
----
+***
 
 ## Key Concept
 
