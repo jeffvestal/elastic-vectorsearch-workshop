@@ -27,7 +27,7 @@ tabs:
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
-  path: /
+  path: /notebooks/lab4-rag-pipeline.ipynb
   port: 8888
 difficulty: intermediate
 timelimit: 1800

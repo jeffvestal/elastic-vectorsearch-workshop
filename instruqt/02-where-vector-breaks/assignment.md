@@ -27,7 +27,7 @@ tabs:
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
-  path: /
+  path: /notebooks/lab2-where-vector-breaks.ipynb
   port: 8888
 difficulty: basic
 timelimit: 1800

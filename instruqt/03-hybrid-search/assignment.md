@@ -27,7 +27,7 @@ tabs:
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
-  path: /
+  path: /notebooks/lab3-hybrid-search.ipynb
   port: 8888
 difficulty: intermediate
 timelimit: 1800

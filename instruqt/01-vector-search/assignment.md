@@ -26,7 +26,7 @@ tabs:
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
-  path: /
+  path: /notebooks/lab1-vector-search.ipynb
   port: 8888
 difficulty: basic
 timelimit: 1800
