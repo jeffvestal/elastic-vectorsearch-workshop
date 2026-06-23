@@ -37,6 +37,8 @@ enhanced_loading: null
 
 **Goal:** Find the queries where semantic search fails. Rescue them with BM25. Then find where BM25 fails too.
 
+# Part 1 — Dev Console
+
 > **How to run queries:** Copy each code block into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***

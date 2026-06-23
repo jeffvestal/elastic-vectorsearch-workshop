@@ -36,6 +36,8 @@ enhanced_loading: null
 
 **Goal:** Run semantic queries against a pre-indexed corpus of Elastic docs. See how Jina v5 via EIS embeds your query server-side — no client embedding code required.
 
+# Part 1 — Dev Console
+
 > **How to run queries:** Copy each code block below into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***

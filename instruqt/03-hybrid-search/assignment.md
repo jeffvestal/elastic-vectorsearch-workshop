@@ -37,6 +37,8 @@ enhanced_loading: null
 
 **Goal:** Combine BM25 + semantic into a single retriever that wins on all the query types that broke each method individually in Lab 2.
 
+# Part 1 — Dev Console
+
 > **How to run queries:** Copy each code block into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***
