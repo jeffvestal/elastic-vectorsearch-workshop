@@ -46,10 +46,10 @@ echo "=== Setting up notebooks ==="
 mkdir -p /root/notebooks
 # Copy all 4 lab notebooks — Jupyter serves the whole /root/notebooks dir,
 # so all appear in the browser without requiring separate Instruqt pages.
-cp /root/workshop/instruqt/01-vector-search/lab1-vector-search.ipynb /root/notebooks/
-cp /root/workshop/instruqt/02-where-vector-breaks/lab2-where-vector-breaks.ipynb /root/notebooks/
-cp /root/workshop/instruqt/03-hybrid-search/lab3-hybrid-search.ipynb /root/notebooks/
-cp /root/workshop/instruqt/04-why-it-matters/lab4-rag-pipeline.ipynb /root/notebooks/
+cp /root/workshop/notebooks/lab1-vector-search.ipynb /root/notebooks/
+cp /root/workshop/notebooks/lab2-where-vector-breaks.ipynb /root/notebooks/
+cp /root/workshop/notebooks/lab3-hybrid-search.ipynb /root/notebooks/
+cp /root/workshop/notebooks/lab4-rag-pipeline.ipynb /root/notebooks/
 
 echo "=== Starting Jupyter server on :8888 ==="
 # Token and password auth disabled — sandbox is network-isolated.
