@@ -104,6 +104,8 @@ Retrieves deliberately wrong documents by filtering to off-topic content, feeds 
 
 Explains document-level security (DLS) in Elasticsearch. With DLS enabled, Elasticsearch evaluates access permissions *before* running the query — filtered documents never appear in results and therefore never enter the prompt. The LLM physically cannot surface content the user isn't authorized to see.
 
+> **Workshop vs production note:** The BAD context experiment used a manual `trap_type` filter we wrote ourselves — that's not real DLS. We did it this way because setting up RBAC roles takes more time than a workshop allows. In production, DLS attaches role-based filters automatically to users or API keys at query time, with no filter clause in application code. The concept is the same; the mechanism is automatic.
+>
 > **Why this matters for agents:** LLM-based systems need access control at the retrieval layer, not in the prompt ("don't mention confidential docs"). Prompt-level rules can be bypassed. Database-level rules cannot.
 
 **Cell 10: Citation prompting**
