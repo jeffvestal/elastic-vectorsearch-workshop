@@ -37,11 +37,13 @@ enhanced_loading: null
 
 **Goal:** Find the queries where semantic search fails. Rescue them with BM25. Then find where BM25 fails too.
 
+> **How to run queries:** Copy each code block into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
+
 ***
 
 ## Part A — Break vector search with exact tokens
 
-Run these queries using `semantic` on `body_semantic`. Check the top results.
+Let's start with a query for a specific error code. Copy this into the Dev Console and run it:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -61,17 +63,61 @@ GET aiewf-workshop-docs/_search
 }
 ```
 
-Also try:
-- `"8.18 breaking changes"` — version string (vector blurs 8.15 / 8.18 / 9.0)
-- `"xpack.security.authc.realms configuration"` — exact setting name
+> **What you should see:** The document about OOM-killed processes (exit code 137 = kernel killed the process) is **not** in the top results. You'll see generic memory or crash docs instead.
+>
+> **Why this fails:** Semantic search compresses text into a meaning vector. The number `137` gets compressed into a general "error/crash" region of vector space — indistinguishable from `136`, `139`, or any other exit code. The exact integer is lost. Semantic search is great at meaning, but meaning can't distinguish `137` from `138`.
 
-**Expected behavior:** wrong or irrelevant docs at rank 1. Vector can't distinguish `137` from `136`.
+Now run these two more to see the same pattern:
+
+```
+GET aiewf-workshop-docs/_search
+{
+  "retriever": {
+    "standard": {
+      "query": {
+        "semantic": {
+          "field": "body_semantic",
+          "query": "8.18 breaking changes"
+        }
+      }
+    }
+  },
+  "size": 5,
+  "_source": ["id", "title", "trap_type", "version_tags"]
+}
+```
+
+> **What you should see:** Results include docs about 8.15, 8.17, or 9.0 breaking changes — not specifically 8.18.
+>
+> **Why this fails:** `8.18` and `8.15` are semantically identical (both mean "a specific Elasticsearch version"). The vector model can't tell them apart because they *mean* the same thing. Only exact token matching can distinguish version strings.
+
+```
+GET aiewf-workshop-docs/_search
+{
+  "retriever": {
+    "standard": {
+      "query": {
+        "semantic": {
+          "field": "body_semantic",
+          "query": "xpack.security.authc.realms configuration"
+        }
+      }
+    }
+  },
+  "size": 5,
+  "_source": ["id", "title", "trap_type"]
+}
+```
+
+> **What you should see:** Generic security/auth docs, but not the specific `xpack.security.authc.realms` settings reference.
+>
+> **Why this fails:** That dotted config key is a precise identifier. Semantic search sees "something about realm configuration" and returns broadly related security docs — it doesn't anchor on the exact string.
 
 ***
 
 ## Part B — BM25 rescues exact tokens
 
-Same query, different retriever:
+BM25 (the classic keyword search algorithm) works on exact token matching and term frequency. Copy this into the Dev Console:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -92,13 +138,18 @@ GET aiewf-workshop-docs/_search
 }
 ```
 
-BM25 wins here — exact token match, TF-IDF scoring, right doc at rank 1.
+> **What you should see:** The OOM-killed processes doc is now at rank 1 (or very close to it).
+>
+> **Why BM25 wins here:** BM25 tokenizes `exit code 137` into three separate tokens and scores documents that contain those exact tokens. Documents containing all three — especially `137` — score highest. The exact number is preserved, not compressed.
+>
+> **The difference from semantic:** BM25 is a counting algorithm. It asks "how often does this exact word appear in this document, relative to the corpus?" Semantic asks "how similar is the meaning of this query to this document?" For exact codes and identifiers, counting wins.
 
 ***
 
 ## Part C — Now break BM25 with a paraphrase
 
-**Semantic wins:**
+Run this semantic query:
+
 ```
 GET aiewf-workshop-docs/_search
 {
@@ -116,9 +167,13 @@ GET aiewf-workshop-docs/_search
   "_source": ["id", "title", "trap_type"]
 }
 ```
-Expected: SAML/auth troubleshooting doc in top 3.
 
-**BM25 fails:**
+> **What you should see:** A SAML / authentication troubleshooting doc in the top 3 results.
+>
+> **Why semantic wins:** The user said "log in" but the doc talks about "authentication failure" and "identity provider." Different words, same concept. Semantic search maps both into the same region of vector space.
+
+Now run the same query with BM25:
+
 ```
 GET aiewf-workshop-docs/_search
 {
@@ -137,24 +192,31 @@ GET aiewf-workshop-docs/_search
   "_source": ["id", "title", "trap_type"]
 }
 ```
-Expected: that doc is NOT in top 5. No matching tokens = zero BM25 score.
+
+> **What you should see:** The SAML authentication doc is **not** in the top 5. Completely different results.
+>
+> **Why BM25 fails here:** BM25 looks for the tokens `user`, `can't`, `log`, `in`. The SAML troubleshooting doc doesn't contain any of those words — it uses "authentication," "principal," "identity provider." Zero token overlap = zero BM25 score. The doc is invisible to keyword search no matter how relevant it actually is.
 
 ***
 
 ## The Core Tension
 
+Both methods are strong — and both have a fundamental blind spot:
+
 | Method | Wins at | Fails at |
 |--------|---------|---------|
-| Vector | Natural language, paraphrases, intent | Exact tokens, version numbers, codes |
-| BM25 | Exact tokens, version strings, settings | Paraphrases, synonyms, intent |
+| Semantic (vector) | Natural language, paraphrases, intent | Exact tokens, version numbers, error codes |
+| BM25 (lexical) | Exact tokens, version strings, config keys | Paraphrases, synonyms, intent |
 
-**Next lab:** combine both into a single retriever that wins on all query types.
+**The insight:** A real user base sends both query types. You can't know in advance which kind is coming.
+
+**Next lab:** Combine both into a single retriever that wins on all query types.
 
 ***
 
 ## Go deeper — Python Notebook
 
 Open the **Python Notebook** tab and run `lab2-where-vector-breaks.ipynb` to:
-- Run all comparisons in Python with a side-by-side `compare()` helper
-- Read the BM25 `_explanation` tree to understand tf/idf scoring
-- See the core-tension table with all failure modes summarized
+- Run all comparisons side-by-side with a `compare()` helper that prints both results at once
+- Read the BM25 `_explanation` tree to see exactly how tf/idf scoring works
+- See the full failure-mode table with all trap query types summarized

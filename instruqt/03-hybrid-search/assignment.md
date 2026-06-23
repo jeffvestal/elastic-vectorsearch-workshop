@@ -35,13 +35,17 @@ enhanced_loading: null
 ---
 # Lab 3 — Hybrid: Best of Both (RRF + Linear Combination)
 
-**Goal:** Compose BM25 + semantic into a single retriever that wins on all query types from Labs 1 & 2.
+**Goal:** Combine BM25 + semantic into a single retriever that wins on all the query types that broke each method individually in Lab 2.
+
+> **How to run queries:** Copy each code block into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***
 
 ## Part A — RRF Hybrid Retriever
 
-RRF (Reciprocal Rank Fusion) combines ranked lists without needing score normalization.
+**What is RRF?** Reciprocal Rank Fusion combines two ranked result lists into one without needing to compare or normalize their scores. For each document, it computes `1 / (rank_constant + rank)` from each retriever and sums them. A document that ranks #1 in both lists wins. A document that ranks #2 in one and doesn't appear in the other still beats a document that only appears once at #10. Rank position is all that matters — not the raw scores.
+
+Copy this into the Dev Console and run it:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -80,17 +84,23 @@ GET aiewf-workshop-docs/_search
 }
 ```
 
-**Test it against Lab 2's hard queries** — change `"user can't log in"` in BOTH sub-retrievers to:
-- `"exit code 137"` — should now find the right doc (BM25 sub-retriever wins)
-- `"user can't log in"` — should find SAML doc (semantic sub-retriever wins)
+> **What you should see:** The SAML authentication doc that BM25 missed in Lab 2 is back in the top results.
+>
+> **Why this works:** The semantic sub-retriever ranked the SAML doc high. Even though BM25 gave it zero score (no token overlap), RRF only needs *one* of the two sub-retrievers to rank a doc. The SAML doc's strong semantic rank pulls it into the combined top-5.
 
-The hybrid wins on both.
+Now test it against Lab 2's BM25 failure mode. **Change both `"query"` values** in the query above to `"exit code 137"` (update the string in the `multi_match` block AND the `semantic` block) and run it again:
+
+> **What you should see:** The OOM-killed processes doc (exit code 137) is now in the top results.
+>
+> **Why this works:** This time BM25 found it by exact token match, and RRF fused that into the combined ranking. The hybrid retriever wins on both query types that broke the individual methods.
 
 ***
 
 ## Part B — Linear Retriever with MinMax Normalization
 
-Linear combination lets you tune weights per sub-retriever:
+RRF ignores raw scores. Linear combination uses them — but first normalizes them to the same 0–1 scale using MinMax so scores from different algorithms can be added.
+
+Copy this into the Dev Console:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -135,27 +145,36 @@ GET aiewf-workshop-docs/_search
 }
 ```
 
-Try shifting weights — `0.8` BM25 / `0.2` semantic for exact-token-heavy workloads.
+> **What you should see:** Similar results to RRF, but the ranking may differ slightly because linear combination weights the *magnitude* of each score, not just rank position.
+>
+> **Why the normalizer matters:** BM25 scores are typically in the range 0–20. Semantic scores are typically in the range 0–1. Without normalization, BM25 would completely dominate the sum. `normalizer: minmax` scales each retriever's scores to 0–1 before combining, so `weight: 0.5` actually means 50/50.
+
+Now try shifting the weights to favor BM25 for an exact-token query. Change the `"query"` to `"8.18 breaking changes"` and set `"weight": 0.8` for the BM25 retriever and `"weight": 0.2` for semantic:
+
+> **What you should see:** The 8.18-specific docs rank higher than with equal weights, because the BM25 sub-retriever's exact-token match for `8.18` now has more influence on the final score.
 
 ***
 
-## RRF vs Linear
+## RRF vs Linear — Which Should You Use?
 
 | | RRF | Linear |
 |---|---|---|
-| Normalization | Not needed (rank-based) | MinMax built-in |
-| Tuning | None required | Weights per sub-retriever |
-| Production default | Yes | When you have calibrated weights |
+| Normalization needed | No (rank-based) | Yes (MinMax built-in) |
+| Weight tuning | None | Per sub-retriever |
+| Recalibration when corpus changes | Not needed | Required |
+| Production default | Yes | When you have measured weights |
 
-**Next lab:** wire this retriever to an LLM and prove retrieval quality determines answer quality.
+**The practical difference:** RRF works well out of the box and stays stable as your corpus grows or your embedding model changes. Linear combination can outperform RRF *if* you've measured the right weights for your specific data and query distribution — but those weights go stale when things change.
+
+**Next lab:** Wire this hybrid retriever to an LLM and see how retrieval quality directly controls answer quality.
 
 ***
 
 ## Go deeper — Python Notebook
 
 Open the **Python Notebook** tab and run `lab3-hybrid-search.ipynb` to:
-- Compute Recall@K objectively across BM25, semantic, and RRF on all 4 trap queries
-- Build a version-filtered hybrid retriever using `bool.filter`
-- Run linear combination with tunable weights and see normalization in action
-- Try cross-encoder reranking with `text_similarity_reranker`
-- Review the full retriever decision framework table
+- Compute Recall@K objectively across BM25, semantic, and RRF on all 4 trap queries (so you can see the improvement as a number, not just by eyeballing)
+- Build a version-filtered hybrid retriever using `bool.filter` to scope results to a specific Elasticsearch version
+- Run linear combination with tunable weights and watch normalization change the ranking
+- Try cross-encoder reranking with `text_similarity_reranker` — a second-pass model that re-scores the top-N results more precisely
+- Review the full retriever decision framework: which retriever to reach for based on your query type
