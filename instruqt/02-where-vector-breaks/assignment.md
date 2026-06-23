@@ -23,7 +23,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: lab2-notebook-tab
+- id: sdsrjzcqbzki
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
