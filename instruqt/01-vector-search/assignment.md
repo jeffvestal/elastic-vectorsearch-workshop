@@ -119,13 +119,20 @@ When you run a `semantic` query, four things happen in order:
 
 **This is fast because ANN is approximate** — it doesn't compare your query vector to every document, it navigates a graph (HNSW) to find near-matches in milliseconds.
 
-**Next lab:** We'll find the queries where this completely breaks.
-
 ***
 
-## Go deeper — Python Notebook
+---
 
-Open the **Python Notebook** tab and run `lab1-vector-search.ipynb` to:
-- Inspect the mapping and live inference endpoint in Python
-- See the ANN/HNSW mechanism explained step by step
-- Look inside a stored document to see how `semantic_text` automatically chunks and embeds long text
+# Part 2 — Python Notebook
+
+**Switch to the Python Notebook tab now and open `lab1-vector-search.ipynb`.**
+
+Run the cells in order. The notebook goes deeper on everything you just ran:
+
+- Inspect the mapping and inference endpoint in Python — see the model config including context window and chunking settings
+- Understand the ANN/HNSW mechanism step by step
+- Look inside a stored document to see exactly how `semantic_text` chunked and embedded the body
+- Learn why chunking strategy matters and how Jina v5's late chunking keeps cross-paragraph context coherent
+- See the Matryoshka dimension trade-off: same model, smaller vectors, 95% of the retrieval quality
+
+When you've finished the notebook, **click Next** to move to Lab 2.

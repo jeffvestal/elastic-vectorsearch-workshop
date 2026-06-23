@@ -210,13 +210,20 @@ Both methods are strong — and both have a fundamental blind spot:
 
 **The insight:** A real user base sends both query types. You can't know in advance which kind is coming.
 
-**Next lab:** Combine both into a single retriever that wins on all query types.
+**Next step:** combine both into a single retriever that wins on all query types — but first, the notebook.
 
 ***
 
-## Go deeper — Python Notebook
+---
 
-Open the **Python Notebook** tab and run `lab2-where-vector-breaks.ipynb` to:
-- Run all comparisons side-by-side with a `compare()` helper that prints both results at once
-- Read the BM25 `_explanation` tree to see exactly how tf/idf scoring works
-- See the full failure-mode table with all trap query types summarized
+# Part 2 — Python Notebook
+
+**Switch to the Python Notebook tab now and open `lab2-where-vector-breaks.ipynb`.**
+
+Run the cells in order:
+
+- Run all comparisons side-by-side with a `compare()` helper — semantic and BM25 results printed together so the failure is unmissable
+- Read the BM25 `_explanation` tree to see exactly how tf/idf scoring assigns the score
+- See the full failure-mode table across all trap query types
+
+When you've finished the notebook, **click Next** to move to Lab 3 — where we fix both failure modes at once.

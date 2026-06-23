@@ -303,15 +303,22 @@ GET aiewf-workshop-docs/_search
 
 **The practical difference:** RRF works well out of the box and stays stable as your corpus grows or your embedding model changes. Linear combination can outperform RRF *if* you've measured the right weights for your specific data and query distribution — but those weights go stale when things change.
 
-**Next lab:** Wire this hybrid retriever to an LLM and see how retrieval quality directly controls answer quality.
+**Next step:** wire this retriever to an LLM — but first, the notebook.
 
 ***
 
-## Go deeper — Python Notebook
+---
 
-Open the **Python Notebook** tab and run `lab3-hybrid-search.ipynb` to:
-- Compute Recall@K objectively across BM25, semantic, and RRF on all 4 trap queries (so you can see the improvement as a number, not just by eyeballing)
+# Part 2 — Python Notebook
+
+**Switch to the Python Notebook tab now and open `lab3-hybrid-search.ipynb`.**
+
+Run the cells in order:
+
+- Compute Recall@K objectively across BM25, semantic, and RRF on all 4 trap queries — see the improvement as a number, not just by eyeballing
 - Build a version-filtered hybrid retriever using `bool.filter` to scope results to a specific Elasticsearch version
 - Run linear combination with tunable weights and watch normalization change the ranking
 - Try cross-encoder reranking with `text_similarity_reranker` — a second-pass model that re-scores the top-N results more precisely
-- Review the full retriever decision framework: which retriever to reach for based on your query type
+- Review the full retriever decision framework
+
+When you've finished the notebook, **click Next** to move to Lab 4.
