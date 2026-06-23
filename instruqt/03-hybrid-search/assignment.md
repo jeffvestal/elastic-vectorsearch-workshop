@@ -37,8 +37,9 @@ enhanced_loading: null
 
 **Goal:** Combine BM25 + semantic into a single retriever that wins on all the query types that broke each method individually in Lab 2.
 
-# Part 1 — Dev Console
-
+Part 1 — Dev Console
+====================
+> [!NOTE]
 > **How to run queries:** Copy each code block into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***
@@ -311,11 +312,14 @@ GET aiewf-workshop-docs/_search
 
 ---
 
-# Part 2 — Python Notebook
+Part 2 — Python Notebook
+========================
 
-**Switch to the Python Notebook tab now and open `lab3-hybrid-search.ipynb`.**
+## Setup:
+1. Switch to the [button label="Python Notebook"](tab-1)
+2. Open `lab3-hybrid-search.ipynb`
 
-Run the cells in order:
+Run the cells in order.
 
 - Compute Recall@K objectively across BM25, semantic, and RRF on all 4 trap queries — see the improvement as a number, not just by eyeballing
 - Build a version-filtered hybrid retriever using `bool.filter` to scope results to a specific Elasticsearch version

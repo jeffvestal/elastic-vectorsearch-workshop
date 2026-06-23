@@ -36,8 +36,10 @@ enhanced_loading: null
 
 **Goal:** Run semantic queries against a pre-indexed corpus of Elastic docs. See how Jina v5 via EIS embeds your query server-side — no client embedding code required.
 
-# Part 1 — Dev Console
 
+Part 1 — Dev Console
+===
+ > [!NOTE]
 > **How to run queries:** Copy each code block below into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***
@@ -123,13 +125,17 @@ When you run a `semantic` query, four things happen in order:
 
 ***
 
----
 
-# Part 2 — Python Notebook
+Part 2 — Python Notebook
+===
 
-**Switch to the Python Notebook tab now and open `lab1-vector-search.ipynb`.**
+## Setup:
+1. Switch to the [button label="Python Notebook"](tab-1)
+2. Oopen `lab1-vector-search.ipynb`
 
-Run the cells in order. The notebook goes deeper on everything you just ran:
+## Run the cells in order.
+
+The notebook goes deeper on everything you just ran:
 
 - Inspect the mapping and inference endpoint in Python — see the model config including context window and chunking settings
 - Understand the ANN/HNSW mechanism step by step

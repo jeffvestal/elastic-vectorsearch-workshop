@@ -37,9 +37,14 @@ enhanced_loading: null
 
 **Goal:** Wire the Lab 3 hybrid retriever to an LLM. Compare what happens when you give it good context vs bad context — using the same model, the same question, and the same code. Prove that retrieval quality — not model quality — bounds answer quality.
 
-# Part 1 — Python Notebook
+Part 1 — Python Notebook
+========================
 
-> **Open the Python Notebook tab now and run `lab4-rag-pipeline.ipynb` from top to bottom.** The sections below walk through what each step does and why it matters.
+## Setup:
+1. Switch to the [button label="Python Notebook"](tab-1)
+2. Open `lab4-rag-pipeline.ipynb` and run cells from top to bottom
+
+The sections below walk through what each step does and why it matters.
 
 ***
 

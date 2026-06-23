@@ -37,8 +37,9 @@ enhanced_loading: null
 
 **Goal:** Find the queries where semantic search fails. Rescue them with BM25. Then find where BM25 fails too.
 
-# Part 1 — Dev Console
-
+Part 1 — Dev Console
+====================
+> [!NOTE]
 > **How to run queries:** Copy each code block into the **Elastic Cloud Serverless** tab (the Dev Console). Click the green ▶ play button or press **Ctrl+Enter** to execute.
 
 ***
@@ -218,11 +219,14 @@ Both methods are strong — and both have a fundamental blind spot:
 
 ---
 
-# Part 2 — Python Notebook
+Part 2 — Python Notebook
+========================
 
-**Switch to the Python Notebook tab now and open `lab2-where-vector-breaks.ipynb`.**
+## Setup:
+1. Switch to the [button label="Python Notebook"](tab-1)
+2. Open `lab2-where-vector-breaks.ipynb`
 
-Run the cells in order:
+Run the cells in order.
 
 - Run all comparisons side-by-side with a `compare()` helper — semantic and BM25 results printed together so the failure is unmissable
 - Read the BM25 `_explanation` tree to see exactly how tf/idf scoring assigns the score
