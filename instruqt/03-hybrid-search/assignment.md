@@ -23,6 +23,12 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
+- id: lab3-notebook-tab
+  title: Python Notebook
+  type: service
+  hostname: kubernetes-vm
+  path: /
+  port: 8888
 difficulty: intermediate
 timelimit: 1800
 enhanced_loading: null
@@ -142,3 +148,14 @@ Try shifting weights — `0.8` BM25 / `0.2` semantic for exact-token-heavy workl
 | Production default | Yes | When you have calibrated weights |
 
 **Next lab:** wire this retriever to an LLM and prove retrieval quality determines answer quality.
+
+***
+
+## Go deeper — Python Notebook
+
+Open the **Python Notebook** tab and run `lab3-hybrid-search.ipynb` to:
+- Compute Recall@K objectively across BM25, semantic, and RRF on all 4 trap queries
+- Build a version-filtered hybrid retriever using `bool.filter`
+- Run linear combination with tunable weights and see normalization in action
+- Try cross-encoder reranking with `text_similarity_reranker`
+- Review the full retriever decision framework table

@@ -23,6 +23,12 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
+- id: lab2-notebook-tab
+  title: Python Notebook
+  type: service
+  hostname: kubernetes-vm
+  path: /
+  port: 8888
 difficulty: basic
 timelimit: 1800
 enhanced_loading: null
@@ -143,3 +149,12 @@ Expected: that doc is NOT in top 5. No matching tokens = zero BM25 score.
 | BM25 | Exact tokens, version strings, settings | Paraphrases, synonyms, intent |
 
 **Next lab:** combine both into a single retriever that wins on all query types.
+
+***
+
+## Go deeper — Python Notebook
+
+Open the **Python Notebook** tab and run `lab2-where-vector-breaks.ipynb` to:
+- Run all comparisons in Python with a side-by-side `compare()` helper
+- Read the BM25 `_explanation` tree to understand tf/idf scoring
+- See the core-tension table with all failure modes summarized

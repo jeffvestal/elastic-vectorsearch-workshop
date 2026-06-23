@@ -22,6 +22,12 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
+- id: lab1-notebook-tab
+  title: Python Notebook
+  type: service
+  hostname: kubernetes-vm
+  path: /
+  port: 8888
 difficulty: basic
 timelimit: 1800
 enhanced_loading: null
@@ -97,3 +103,12 @@ When you run a `semantic` query:
 4. Returns semantically similar docs — no vocabulary matching needed
 
 **Next lab:** we'll find queries where this breaks.
+
+***
+
+## Go deeper — Python Notebook
+
+Open the **Python Notebook** tab and run `lab1-vector-search.ipynb` to:
+- Inspect the mapping and live inference endpoint in Python
+- See the ANN/HNSW mechanism explained step by step
+- Look inside a stored document to see how `semantic_text` chunks and embeds automatically

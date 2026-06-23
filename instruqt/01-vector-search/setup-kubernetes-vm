@@ -3,11 +3,10 @@
 # 1. Provisions Elastic Serverless (vector-optimized) via start_serverless.sh
 # 2. Stores credentials as Instruqt agent variables for all challenges
 # 3. Installs Python deps, clones repo, ingests corpus
-# 4. Starts Jupyter server on :8888 for Lab 4 notebook tab
+# 4. Copies all 4 lab notebooks to /root/notebooks and starts Jupyter on :8888
 #
-# Lab 4 LLM synthesis (Cell 7) uses the LiteLLM proxy pre-loaded in the preset.
-# LLM_PROXY_URL is injected automatically by the preset bootstrap — no manual config needed.
-# Supported models include claude-sonnet-4 via SA_LLM_PROXY_BEARER_TOKEN.
+# LLM synthesis (Lab 4) uses the Elastic Inference Service — ES_API_KEY authenticates both
+# Elasticsearch queries and LLM calls. No separate Anthropic key required.
 set -euo pipefail
 
 echo "=== Provisioning Elastic Serverless (vector-optimized) ==="
@@ -33,7 +32,7 @@ echo "Kibana: $ES_KIBANA"
 echo "Kibana also proxied at http://localhost:30001 (NGINX)"
 
 echo "=== Installing Python dependencies ==="
-pip install 'elasticsearch>=8.17,<9' jupyter anthropic
+pip install 'elasticsearch>=8.17,<9' jupyter requests
 python3 -c "import elasticsearch; print('elasticsearch client:', elasticsearch.__version__)"
 
 echo "=== Cloning workshop repo ==="
@@ -43,9 +42,14 @@ echo "=== Ingesting corpus ==="
 cd /root/workshop/corpus
 python3 ingest.py 2>&1
 
-echo "=== Setting up notebook ==="
-mkdir -p /root/lab4
-cp /root/workshop/instruqt/04-why-it-matters/lab4.ipynb /root/lab4/
+echo "=== Setting up notebooks ==="
+mkdir -p /root/notebooks
+# Copy all 4 lab notebooks — Jupyter serves the whole /root/notebooks dir,
+# so all appear in the browser without requiring separate Instruqt pages.
+cp /root/workshop/instruqt/01-vector-search/lab1-vector-search.ipynb /root/notebooks/
+cp /root/workshop/instruqt/02-where-vector-breaks/lab2-where-vector-breaks.ipynb /root/notebooks/
+cp /root/workshop/instruqt/03-hybrid-search/lab3-hybrid-search.ipynb /root/notebooks/
+cp /root/workshop/instruqt/04-why-it-matters/lab4-rag-pipeline.ipynb /root/notebooks/
 
 echo "=== Starting Jupyter server on :8888 ==="
 # Token and password auth disabled — sandbox is network-isolated.
@@ -62,7 +66,7 @@ nohup jupyter notebook \
   --ServerApp.password='' \
   --ServerApp.allow_origin='*' \
   --ServerApp.disable_check_xsrf=True \
-  --notebook-dir=/root/lab4 \
+  --notebook-dir=/root/notebooks \
   >> /var/log/jupyter.log 2>&1 &
 
 echo "=== Health check ==="
