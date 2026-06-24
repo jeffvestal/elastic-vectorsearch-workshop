@@ -27,6 +27,47 @@ The arc:
 
 ---
 
+## What You'll Do (attendee summary)
+
+Drop-in copy for the Instruqt landing page, an invite, or a slide.
+
+### Short version — one line per lab
+
+**The thesis:** in RAG, retrieval quality — not the model — determines answer quality.
+
+- **Lab 1 — Vector Search:** Run semantic queries and see how Elastic generates embeddings (Jina v5) to match on *meaning*, not keywords.
+- **Lab 2 — Where Vector Breaks:** Find the queries that break semantic *and* the ones that break BM25 — and read the scores to see why neither is safe alone.
+- **Lab 3 — Hybrid Search:** Fuse BM25 + semantic with RRF (and linear) into one retriever that wins on every query type that broke the others.
+- **Lab 4 — Why It Matters:** Wire hybrid retrieval to an LLM and prove that same model + worse retrieval = worse answer.
+
+**By the end:** you can build and tune a production hybrid retriever, explain why each method fails where it does, and show that retrieval — not the model — is where RAG answer quality is won.
+
+### Longer version — what each challenge teaches
+
+**Lab 1 — Vector Search: the thing everyone reaches for**
+- *You'll do:* Run semantic queries against a `semantic_text` field; inspect the embedding endpoint, the index mapping, and how a document is chunked and vectorized at index time.
+- *Outcome:* You can run vector search and explain where the embeddings come from — no client-side embedding code.
+
+**Lab 2 — Where Vector Breaks (and lexical's own gap)**
+- *You'll do:* Fire adversarial queries at both retrievers and read the BM25 `explain` output (`boost × idf × tf`) to see *why* each ranked the way it did.
+- *Outcome:* You can predict which retriever fails on which query shape — semantic *blurs* exact identifiers, BM25 picks the *wrong* exact match on a boosted title and *buries* paraphrases — and why neither is safe alone.
+
+**Lab 3 — Hybrid Search: best of both**
+- *You'll do:* Compose BM25 + semantic under an RRF retriever, then a linear retriever with MinMax normalization and tunable weights; re-run every Lab 2 trap through the hybrid.
+- *Outcome:* You can build a production hybrid retriever and choose RRF vs. linear deliberately — including seeing a query where the "obvious" weight choice backfires.
+
+**Lab 4 — Why It Matters for Agents**
+- *You'll do:* Wire the hybrid retriever to an LLM (Elastic Inference Service), run the same question with good vs. deliberately wrong retrieval, then add citation prompting and a multi-hop agent.
+- *Outcome:* You can build a RAG pipeline and explain why retrieval — not the model — bounds answer quality, and where RBAC/DLS enforce access at the credential, not the prompt.
+
+**Overall, by the end you can:**
+- Run semantic, lexical, and hybrid retrieval in Elasticsearch and explain the mechanics of each
+- Diagnose *why* a given query succeeds or fails on each method
+- Build and tune a production hybrid retriever (RRF + linear) that wins across query types
+- Wire retrieval to an LLM and demonstrate that retrieval quality bounds answer quality
+
+---
+
 ## Time Budget
 
 | Segment | Time | Interface |
@@ -67,9 +108,9 @@ Work through this at least 72h before the event. All items are blocking unless m
   - Option 2 (fallback): instructor-driven notebook on screen — attendees follow along
   - Option 3 (last resort): skip the notebook, show a single Python snippet in console
   - **Decide before the event and update the Lab 4 assignment.md and track.yml accordingly**
-- [ ] **Pre-run Cell 5 (good context)** — verify it produces a clear, accurate answer about SAML auth troubleshooting
-- [ ] **Pre-run Cell 6 (bad context)** — verify it produces a clearly degraded/irrelevant answer
-- [ ] **Pre-run Cell 7 (full pipeline)** — verify end-to-end retrieve → synthesize works
+- [ ] **Pre-run Cell 5 (good context)** — verify it produces a clear, accurate answer about Watcher alerting ("How do I get notified when something goes wrong in my cluster?"). Context + answer are pre-baked, but confirm the LLM call returns.
+- [ ] **Pre-run Cell 6 (bad context)** — same question, deliberately off-topic context (ILM/snapshots/pipelines); verify the model answers "I don't have enough information"
+- [ ] **Pre-run Cell 7 (full pipeline)** — verify end-to-end retrieve → synthesize works live (uncached)
 
 ### Pacing
 
@@ -155,11 +196,12 @@ workshops/aiewf-2026/
 
 ### Lab 4 (~20 min)
 
-- Frame the four-stage pipeline before opening the notebook
-- Cell 5 (good context): read the output aloud, point to the specific auth troubleshooting content
-- Cell 6 (bad context): pause before running. "Same question. Same model. Same prompt. Watch."
+- Frame the pipeline before opening the notebook: retrieve → build prompt → generate
+- Cell 5 (good context): read the answer aloud, point to the specific Watcher trigger/condition/action content it grounded on
+- Cell 6 (bad context): pause before running. "Same question. Same model. Same prompt. Watch." — the model returns "I don't have enough information"
 - After Cell 6: "The model didn't get dumber. The retrieval got worse." — this is the closing line.
 - Cell 7: if time allows, take a question from the audience and run it live through the full pipeline
+- The security section is now two parts: an app `bool.filter` is **not** access control (say so explicitly); RBAC/DLS enforce on the credential's role. The DLS code is shown but not run — the sandbox's managed API key can't mint a restricted child key.
 
 ---
 
@@ -179,8 +221,8 @@ workshops/aiewf-2026/
 | doc-008 | Cluster shard allocation settings | exact-token | "new_primaries" — semantic returns WRONG doc; BM25 pins doc-008 |
 | doc-057 | Elasticsearch 8.18 release notes | version-specific | "8.18 breaking changes" — BM25 ranks WRONG doc (doc-006); semantic wins |
 | doc-006 | Elasticsearch breaking changes (9.x) | version-specific | the boosted-title doc BM25 wrongly prefers on "8.18 breaking changes" |
-| doc-049 | Elasticsearch Watcher alerting | paraphrase target | "notify me when something goes wrong" — semantic #1, BM25 buries it |
-| doc-001 | SAML authentication troubleshooting | paraphrase | used as a RAG example in Lab 4 (notebooks variant) |
+| doc-049 | Elasticsearch Watcher alerting | paraphrase target | "notify me when something goes wrong" — semantic #1, BM25 buries it; also the Lab 4 RAG good-context example |
+| doc-001 | SAML authentication troubleshooting | paraphrase | "configure SAML authentication" — the good-context RAG example in `notebooks/lab4-rag-pipeline.ipynb` |
 | doc-009 / doc-010 | Security setup / TLS for cluster comms | near-duplicate | paired near-duplicates |
 
 Full validation details (with exact ranks): `corpus/TRAP_QUERY_VALIDATION.md`
