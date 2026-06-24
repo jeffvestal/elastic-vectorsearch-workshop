@@ -107,15 +107,25 @@ Retrieves deliberately wrong documents by filtering to off-topic content, feeds 
 >
 > **Why this is the key demo:** The model didn't get dumber. The retrieval got worse. Same question, same model, same code — the only variable is what came back from the database. This is why RAG is a database problem, not a model problem.
 
-**Cell 9: Security at the database layer**
+**Cell 9: Retrieval shapes what the LLM sees**
 
-Explains document-level security (DLS) in Elasticsearch. With DLS enabled, Elasticsearch evaluates access permissions *before* running the query — filtered documents never appear in results and therefore never enter the prompt. The LLM physically cannot surface content the user isn't authorized to see.
+Frames the BAD-context result correctly: the model couldn't discuss SAML because those docs were *never retrieved*, so they never entered the prompt. The LLM can only reason over what retrieval handed it — which is why RAG is a retrieval problem first.
 
-> **Workshop vs production note:** The BAD context experiment used a manual `trap_type` filter we wrote ourselves — that's not real DLS. We did it this way because setting up RBAC roles takes more time than a workshop allows. In production, DLS attaches role-based filters automatically to users or API keys at query time, with no filter clause in application code. The concept is the same; the mechanism is automatic.
+> **Be precise:** the BAD-context cell used a `bool.filter` *we wrote ourselves*. That shaped the results for the demo but enforces nothing — anyone with the same API key can drop the clause and see everything. It is **not** access control. Don't call an application filter "security."
+
+**Cell 10: Real access control — RBAC and DLS**
+
+Explains the two mechanisms that *do* enforce restriction, on the **credential** rather than the query:
+- **RBAC** — a role grants/denies whole indices and actions (can this credential read the index at all?).
+- **DLS** — a role attaches a query to an index privilege, so the credential can only ever see the documents that query matches (which rows may it see?).
+
+Shows the real `create_api_key` + DLS role-descriptor code as a reference example.
+
+> **We don't run the DLS cell live:** the sandbox authenticates you with a *managed API key*, and Serverless won't let an API key mint a privilege-bearing child key (`creating derived api keys requires an explicit role descriptor that is empty`). DLS roles are created by an admin/user credential with `manage_security`. The snippet works as written against such a cluster.
 >
-> **Why this matters for agents:** LLM-based systems need access control at the retrieval layer, not in the prompt ("don't mention confidential docs"). Prompt-level rules can be bypassed. Database-level rules cannot.
+> **Why this matters for agents:** access control belongs in the credential's role at the retrieval layer, not in the prompt ("don't mention confidential docs"). Prompt-level rules can be bypassed; role-enforced DLS cannot.
 
-**Cell 10: Citation prompting**
+**Cell 11: Citation prompting**
 
 Shows a prompt variant that asks the model to cite sources as `[Source N]`. Run this and compare the answer to Cell 7's answer.
 
@@ -123,11 +133,11 @@ Shows a prompt variant that asks the model to cite sources as `[Source N]`. Run 
 >
 > **Why this is useful:** Citations make RAG answers auditable. Users can verify the model's claims against the actual source documents.
 
-**Cell 11: Run your own question**
+**Cell 12: Run your own question**
 
 A one-liner: `ask("your question here")` — runs hybrid retrieval and synthesis end to end. Try a question about anything in the Elasticsearch docs.
 
-**Cell 12: Multi-hop agent**
+**Cell 13: Multi-hop agent**
 
 A minimal agent loop that decides whether to run a follow-up query. Shows that retrieval + synthesis isn't just one-shot — you can chain it, and each hop is still just search + prompt + generate.
 
