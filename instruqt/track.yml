@@ -7,19 +7,21 @@ description: |
   In this 2-hour hands-on workshop you'll go from pure vector search to a production hybrid
   retriever, learning exactly where each approach succeeds and fails.
 
-  The thesis: most of a RAG pipeline is a database problem, not a model problem.
+  The thesis: in RAG, retrieval quality — not the model — determines answer quality.
 
-  - Challenge 1: Vector Search — run semantic queries, learn how Elastic Inference Service
-    (EIS) generates embeddings server-side via Jina v5. No client-side embedding code.
-  - Challenge 2: Where Vector Breaks — adversarial queries that expose pure vector's blind
-    spots. BM25 rescue. Then BM25's own vocabulary-mismatch gap.
-  - Challenge 3: Hybrid Search — compose BM25 + semantic under an RRF retriever, then a
-    linear retriever with MinMax normalization. Build the retriever that wins on all query types.
-  - Challenge 4: Why It Matters for Agents — wire the hybrid retriever to an LLM synthesis
-    call. Compare good context vs. bad context. "The model didn't get dumber. The retrieval got worse."
+  - Lab 1 — Vector Search: run semantic queries and see how Elastic generates embeddings
+    (Jina v5, server-side) to match on meaning, not keywords. No client-side embedding code.
+  - Lab 2 — Where Vector Breaks: find the queries that break semantic AND the ones that break
+    BM25 — and read the scores to see why neither is safe alone.
+  - Lab 3 — Hybrid Search: fuse BM25 + semantic with RRF (and linear) into one retriever that
+    wins on every query type that broke the others.
+  - Lab 4 — Why It Matters: wire hybrid retrieval to an LLM and prove that same model + worse
+    retrieval = worse answer. "The model didn't get dumber. The retrieval got worse."
 
-  Attendees leave with a reference GitHub repo: pre-baked corpus, ingest script, all Dev
-  Console snippets, and a working Python RAG notebook.
+  By the end you can build and tune a production hybrid retriever, explain why each method
+  fails where it does, and show that retrieval — not the model — is where RAG answer quality
+  is won. You leave with a reference GitHub repo: pre-baked corpus, ingest script, all Dev
+  Console snippets, and working Python notebooks for all four labs.
 icon: ""
 tags:
 - search
@@ -49,5 +51,5 @@ lab_config:
     name: modern-dark
   override_challenge_layout: false
   hideStopButton: false
-checksum: "15809501900307034756"
+checksum: "1453089979748031972"
 enhanced_loading: false

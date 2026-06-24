@@ -1,104 +1,134 @@
 # Handoff — elastic-vectorsearch-workshop
-**Date:** 2026-06-22  
-**From:** Barry B Foldin  
-**To:** Miss Labonz  
-**Workshop:** AI Engineer World's Fair, June 29 — 7 days out
+
+**Updated:** 2026-06-24
+**Workshop:** AI Engineer World's Fair, June 29 — 5 days out
+**Repo:** https://github.com/jeffvestal/elastic-vectorsearch-workshop (public)
+
+This file captures context a fresh session can't pick up from a code scan. Everything
+mechanical (file layout, query content, cell structure) is in the code and `README.md`.
 
 ---
 
-## State
+## Current state (as of 2026-06-24)
 
-All workshop content has been built and lives in this repo. Nothing has been tested against a live Elasticsearch cluster yet. The repo is public at:
+All four labs have been **verified live** against a real Serverless cluster (ES 9.5.0,
+Jina v5 embeddings). Every trap query's SEM/BM25/RRF rank was confirmed, all notebooks
+execute end-to-end clean, and the EIS LLM calls return. This is a big change from the
+prior handoff ("nothing tested against a live cluster") — the labs now match their output.
 
-```
-https://github.com/jeffvestal/elastic-vectorsearch-workshop
-```
-
----
-
-## What's Built
-
-```
-corpus/
-  docs.json                  60 real Elastic docs, 13 annotated trap docs
-  ingest.py                  Creates index + bulk-indexes corpus against any Serverless ES project
-  TRAP_QUERY_VALIDATION.md   Pre-event checklist — exact queries, expected doc IDs, why each trap works
-
-instruqt/
-  track.yml                  4 challenges, 30 min each
-  01-vector-search/          Lab 1: semantic_text + EIS/Jina, Dev Console
-  02-where-vector-breaks/    Lab 2: adversarial queries (vector fails) + BM25 rescue + paraphrase trap
-  03-hybrid-search/          Lab 3: RRF + linear combination, the heart (40 min)
-  04-why-it-matters/         Lab 4: hybrid + LLM synthesis, pre-baked good/bad context pairs
-
-notebooks/                   Repo-runnable copies of all 4 labs (lab1..lab4.ipynb) — run against any Serverless project
-corpus/                      docs.json (62 docs) + ingest.py + TRAP_QUERY_VALIDATION.md
-
-README.md                    Instructor guide: time budget, pre-event checklist, presenter notes
-```
+`main` is the source of truth and is pushed. The Instruqt track is pushed too. See
+"Two delivery paths" below — this bit is non-obvious and bit us once.
 
 ---
 
-## Critical Path Before June 29
+## The one thing that's easy to get wrong: two delivery paths
 
-These are **human-gated** — cannot be done by an agent.
+Content reaches attendees by **two independent mechanisms**. Both must be updated or the
+sandbox runs stale content:
 
-### 1. Instruqt notebook-tab check (HARD GATE — do this first)
-The outline calls this the top gate before finalizing Lab 4. Lab 4 currently assumes a notebook tab can be opened in the Instruqt sandbox alongside Kibana, pointing at the same ES endpoint.
+1. **Notebooks + corpus** → the sandbox setup script (`instruqt/01-vector-search/setup-kubernetes-vm`)
+   does `git clone` of GitHub `main` at boot, runs `ingest.py`, and copies the `.ipynb`
+   files into Jupyter. So **notebook/corpus fixes go live by pushing to `main`** — no
+   Instruqt push needed. A sandbox started before your push has the old code baked in.
+2. **assignment.md / queries.md / track.yml (the Dev Console UI)** → delivered by
+   `instruqt track push --force` (run from the `instruqt/` dir). GitHub does NOT update these.
 
-**Action:** Open the Instruqt track editor. Check if `managed-vm-elastic-9-4-0` sandbox preset supports a notebook/code-server tab. If **yes** → Lab 4 in-room is the notebook. If **no** → Lab 4 in-room becomes instructor-driven notebook on screen; attendees follow along, do it at home with the repo `notebooks/`.
+**Standing rule for this repo (Jeff's instruction):** when you finish a change, commit +
+`git push origin main`, and ALSO `instruqt track push --force` if any Instruqt UI file
+changed. Don't wait to be asked. (Saved in agent memory as `feedback_done_means_commit_and_push`.)
 
-See `instruqt/track.yml` — there's a `# HARD GATE` comment where the notebook tab would be configured.
-
-### 2. Run ingest.py against a real Serverless project
-
-```bash
-export ES_ENDPOINT="https://your-project.es.us-east-1.aws.elastic.cloud"
-export ES_API_KEY="your-api-key"
-cd corpus
-pip install elasticsearch
-python ingest.py
-```
-
-Verify: `GET aiewf-workshop-docs/_count` → should return `{"count": 62}` (60 docs + 2 distractors).
-
-### 3. Validate trap queries against the live index
-
-Open `corpus/TRAP_QUERY_VALIDATION.md` and confirm the recorded ranks still hold (they were captured live — re-verify only if the corpus or embedding model changed).
-
-The two most important to spot-check:
-- **`"exit code 137"`** — semantic must rank doc-007 #1 by a *thin* margin over distractor doc-061 (a near-tie); BM25 must rank doc-007 #1 decisively. If doc-007 is no longer a near-tie, re-check distractor docs doc-061/doc-062.
-- **`"notify me when something goes wrong"`** paraphrase trap — semantic → doc-049 (Watcher alerting) #1; BM25 → doc-049 buried (~#5).
-
-### 4. EIS model availability check
-
-In the Serverless project Dev Console, confirm these inference endpoints exist:
-```
-GET _inference/_all
-```
-Need: `.jina-embeddings-v5-text-small` (used by `semantic_text`) and `.jina-reranker-v2-base-multilingual` (Lab 3 pre-run cell).
+**Always verify on a FRESH sandbox** — old ones don't re-clone.
 
 ---
 
-## Lab 4 — API Key Setup
+## Why the corpus/queries are the way they are (the big rework)
 
-`lab4.ipynb` uses `claude-haiku-4-5-20251001` for synthesis. You'll need an Anthropic API key set as `ANTHROPIC_API_KEY`. The good/bad context pairs are pre-baked (hardcoded) — the LLM call is real but the context fed to it is deterministic.
+The original labs were written assuming a *weak* embedding model. The live corpus runs
+**Jina v5**, which is strong enough that the classic "vector can't find exact tokens"
+demos **taught the opposite of the live output**. The whole chain was reworked so every
+example does on the cluster exactly what the prose says. Key decisions baked in:
+
+- **Distractor docs (doc-061, doc-062)** were added specifically so `exit code 137` is a
+  *genuine* semantic near-tie (doc-007 #1 by ~0.001 over doc-061), not an asserted one.
+  They deliberately omit the literal "137". If you re-ingest and doc-007 stops being a
+  near-tie, that's the knob — re-check those two docs.
+- **`summary` field** on all 62 docs is shown in result tables instead of `trap_type`.
+  It's a NEUTRAL description of each doc (what it's about), NOT a "why it ranks" hint —
+  that would spoil the lesson. It is plain `text`, NOT copied into `body_semantic`, so it
+  does not affect embeddings or ranks (verified: ranks identical before/after).
+- **`trap_type`** is real JSON `null` for non-trap docs (was the literal string `"null"` —
+  a bug). It's hidden from learner-facing results but kept for the Lab 4 filter demo.
+- **The `8.18 breaking changes` mechanism is field-boost, NOT term frequency.** The explain
+  output shows title terms carry boost 6.6 (= 2.2 × the `title^3` boost) vs body 2.2 — that's
+  why doc-006's common-word title beats doc-057. Don't relabel it a "TF trap"; the prose is
+  deliberately precise about this because it's the kind of thing that gets challenged.
+- `reference-repo/` was DELETED — it was a stale parallel chain with the old broken queries.
+
+Full verified ranks: `corpus/TRAP_QUERY_VALIDATION.md` (filled from real runs, not assumed).
 
 ---
 
-## Open Questions (unresolved as of 2026-06-22)
+## EIS gotcha (cost a real bug, now fixed — don't reintroduce)
 
-- [ ] Co-presenters from Search spec team — has Mayzak confirmed anyone helping?
-- [ ] Logistics from conference org — slide template, room setup, projector, WiFi for attendees?
-- [ ] Instruqt provisioning — how do attendees get sandbox access? Via a code at the door?
+The Elastic Inference Service `chat_completion` task type is **streaming-only**. A
+non-streaming `_inference/chat_completion` call returns HTTP 400. Lab 4 uses the
+`/_stream` endpoint and parses SSE chunks. If you add an LLM call, use `_stream` (or the
+`completion` task type for non-streaming). Saved in memory as `ref_eis_chat_completion_streaming`.
 
 ---
 
-## Where Things Live
+## Lab 4 security framing (deliberate — don't "simplify" it back)
+
+The Lab 4 "security" section was rewritten because the original called an application-side
+`bool.filter` "DLS/RBAC" — which is wrong and would get torn apart in a technical room.
+Current framing, intentionally:
+- The filter demo is reframed as "**retrieval shapes what the LLM sees**" (a scope/correctness
+  point) and explicitly says a self-written filter is NOT access control.
+- A separate cell covers REAL access control: RBAC (index-level) + DLS (row-level), enforced
+  on the **credential's role**, with real `create_api_key` + DLS role-descriptor code shown
+  as reference — **not run**.
+- **Why DLS isn't run live:** the sandbox key is a *managed API key*, and Serverless blocks an
+  API key from minting a privilege-bearing child key (`creating derived api keys requires an
+  explicit role descriptor that is empty` — verified live). A runnable DLS demo would need an
+  admin/user credential with `manage_security`. Jeff said: if everything else is clean and
+  there's time, we can attempt a genuinely-runnable DLS demo later — otherwise leave as-is.
+
+Note the two Lab 4 files use DIFFERENT RAG questions, both correct:
+- `instruqt/04-why-it-matters/lab4.ipynb` (instructor, pre-baked context) → Watcher question
+  ("How do I get notified when something goes wrong in my cluster?")
+- `notebooks/lab4-rag-pipeline.ipynb` (repo, live retrieval) → SAML question
+
+---
+
+## Dev/test cluster (NOT in the repo — was for development only)
+
+A long-lived dev Serverless project in Jeff's account was used to verify all ranks/queries
+this session. Its creds are NOT committed and must NEVER be hardwired — notebooks/labs stay
+`os.environ.get()`. The provisioned per-attendee sandbox supplies its own creds via Instruqt
+agent variables. Ask Jeff for the dev creds if you need to re-verify; don't go looking for
+them in the repo.
+
+`pip` in the sandbox setup pins `elasticsearch>=8.17,<9` (8.x client vs 9.5 server). It works,
+but flag it if you ever hit a client/server mismatch.
+
+---
+
+## Open items / human-gated (unchanged, still need a human)
+
+1. **HARD GATE: Instruqt notebook-tab availability** — confirmed working in practice this
+   session (Jupyter on :8888, all 4 notebooks served from `/root/notebooks`). Re-verify on a
+   fresh sandbox before the event.
+2. **Co-presenter scope** with Philipp Krenn — confirm role/content.
+3. **Conference logistics** — sandbox access for attendees (code at the door?), slides, WiFi.
+
+---
+
+## Where things live
 
 | Item | Location |
 |---|---|
 | Workshop repo (this) | `~/repos/elastic-vectorsearch-workshop` |
-| Project file (KK) | `~/repos/kuchi-kopi/projects/aiewf-2026-ai-search-workshop.md` |
-| Original outline | `~/repos/kuchi-kopi/drafts/aiewf-workshop-outline-2026-05-28.md` |
+| Instructor guide + attendee summary | `README.md` |
+| Verified trap ranks | `corpus/TRAP_QUERY_VALIDATION.md` |
 | GitHub | https://github.com/jeffvestal/elastic-vectorsearch-workshop |
+| Instruqt track | https://play.instruqt.com/manage/elastic/tracks/aiewf-2026-vector-hybrid-search |
