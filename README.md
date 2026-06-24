@@ -50,14 +50,15 @@ Work through this at least 72h before the event. All items are blocking unless m
 - [ ] **Serverless project provisioned** — one Elastic Serverless project for the instructor demo; Instruqt provisions one per attendee automatically
 - [ ] **EIS inference endpoint available** — run `GET _inference` and confirm `.jina-embeddings-v5-text-small` is listed
 - [ ] **Jina Reranker v2 available** — run `GET _inference` and confirm `.jina-reranker-v2-base-multilingual` (or equivalent) is listed. Note exact inference_id and update the reranker snippet in `instruqt/03-hybrid-search/queries.md` if different.
-- [ ] **Run ingest.py** — `ES_ENDPOINT=... ES_API_KEY=... python corpus/ingest.py` — verify all 60 docs indexed, test semantic query returns results
+- [ ] **Run ingest.py** — `ES_ENDPOINT=... ES_API_KEY=... python corpus/ingest.py` — verify all 62 docs indexed, test semantic query returns results
 
 ### Corpus Validation (CRITICAL)
 
-- [ ] **Run each Lab 2 adversarial query** against the real index. Fill in the verification table in `corpus/TRAP_QUERY_VALIDATION.md`. Each query must show the expected pass/fail behavior.
-- [ ] **Verify paraphrase trap (doc-001)** — "user can't log in" must rank doc-001 in top 2 via semantic, and doc-001 must NOT appear in BM25 top 5. This is the highest-risk live moment. Do not assume — pre-test.
-- [ ] **Run all 4 trap queries through RRF hybrid** — confirm hybrid wins on all 4. Fill in the Lab 3 Verification table in `TRAP_QUERY_VALIDATION.md`.
-- [ ] **Run Lab 1 "wow" queries** — "securing cluster traffic", "how do I back up my cluster data", "users can't connect to Kibana" — confirm satisfying semantic results.
+- [ ] **Run each Lab 2 trap query** against the real index and confirm the ranks in `corpus/TRAP_QUERY_VALIDATION.md` still hold (they were recorded live; re-verify if the corpus or model changed).
+- [ ] **Verify the `exit code 137` near-tie** — semantic must rank doc-007 #1 by a *thin* margin over distractor doc-061 (BM25 must rank doc-007 #1 decisively). If doc-007 is no longer a near-tie, re-check the distractor docs (doc-061/doc-062).
+- [ ] **Verify the paraphrase trap (doc-049)** — "notify me when something goes wrong" must rank doc-049 #1 via semantic and bury it (~#5) via BM25.
+- [ ] **Run all trap queries through RRF hybrid** — confirm RRF lands the target at #1 on every one (see the Lab 3 table in `TRAP_QUERY_VALIDATION.md`).
+- [ ] **Run Lab 1 "wow" queries** — "securing cluster traffic", "how do I back up my cluster data" — confirm satisfying semantic results.
 
 ### Lab 4 (Notebook)
 
@@ -96,7 +97,7 @@ These require human action before the event:
 workshops/aiewf-2026/
 ├── README.md                        ← you are here (instructor guide)
 ├── corpus/
-│   ├── docs.json                    ← 60-doc pre-baked corpus
+│   ├── docs.json                    ← 62-doc pre-baked corpus (60 + 2 distractors)
 │   ├── ingest.py                    ← ingest script (run before event)
 │   └── TRAP_QUERY_VALIDATION.md     ← pre-event trap query checklist
 ├── instruqt/
@@ -113,16 +114,11 @@ workshops/aiewf-2026/
 │   └── 04-why-it-matters/
 │       ├── assignment.md
 │       └── lab4.ipynb               ← Python RAG notebook
-└── reference-repo/                  ← attendee take-home
-    ├── README.md
-    ├── labs/
-    │   ├── lab1-vector-search.md
-    │   ├── lab2-where-vector-breaks.md
-    │   ├── lab3-hybrid.md
-    │   └── lab4.ipynb
-    └── corpus/
-        ├── docs.json
-        └── ingest.py
+└── notebooks/                       ← repo-runnable copies of all 4 labs
+    ├── lab1-vector-search.ipynb
+    ├── lab2-where-vector-breaks.ipynb
+    ├── lab3-hybrid-search.ipynb
+    └── lab4-rag-pipeline.ipynb
 ```
 
 ---
@@ -169,15 +165,22 @@ workshops/aiewf-2026/
 
 ## Corpus Trap Docs Quick Reference
 
-| Doc ID | Title | Trap Type | Adversarial Query |
-|---|---|---|---|
-| doc-001 | SAML authentication troubleshooting | paraphrase | "user can't log in" (vector wins, BM25 misses) |
-| doc-007 | JVM settings for Elasticsearch | exact-token | "exit code 137" |
-| doc-057 | Elasticsearch 8.18 release notes | version-specific | "8.18 breaking changes" |
-| doc-058 | Elasticsearch 8.15 release notes | version-specific | (version blur test) |
-| doc-006 | Elasticsearch breaking changes (9.x) | version-specific | (version blur test) |
-| doc-008 | Cluster shard allocation settings | exact-token | "xpack.security.authc.realms configuration" |
-| doc-009 | Security setup (self-managed) | near-duplicate | (paired with doc-010) |
-| doc-010 | TLS for cluster communications | near-duplicate | (paired with doc-009) |
+> **Result display:** queries `_source` `["id", "title", "summary"]` — each doc has a one-line
+> neutral `summary` so attendees can see what a hit is about without reading the full body.
+> `trap_type` (column below) is the instructor-facing classification; it is kept in the corpus
+> and used as a retrieval filter in Lab 4, but is **not** shown in learner-facing query results.
+> Non-trap docs have `trap_type: null`.
 
-Full validation details: `corpus/TRAP_QUERY_VALIDATION.md`
+| Doc ID | Title | Trap Type | Trap Query — verified behavior |
+|---|---|---|---|
+| doc-007 | JVM settings for Elasticsearch | exact-token | "exit code 137" — semantic #1 but a near-tie (blur); BM25 decisive |
+| doc-061 | Container exit codes when a process is killed | distractor | crowds doc-007 on "exit code 137" (no literal "137") |
+| doc-062 | Troubleshooting application crashes and restarts | distractor | second crowding distractor for "exit code 137" |
+| doc-008 | Cluster shard allocation settings | exact-token | "new_primaries" — semantic returns WRONG doc; BM25 pins doc-008 |
+| doc-057 | Elasticsearch 8.18 release notes | version-specific | "8.18 breaking changes" — BM25 ranks WRONG doc (doc-006); semantic wins |
+| doc-006 | Elasticsearch breaking changes (9.x) | version-specific | the boosted-title doc BM25 wrongly prefers on "8.18 breaking changes" |
+| doc-049 | Elasticsearch Watcher alerting | paraphrase target | "notify me when something goes wrong" — semantic #1, BM25 buries it |
+| doc-001 | SAML authentication troubleshooting | paraphrase | used as a RAG example in Lab 4 (notebooks variant) |
+| doc-009 / doc-010 | Security setup / TLS for cluster comms | near-duplicate | paired near-duplicates |
+
+Full validation details (with exact ranks): `corpus/TRAP_QUERY_VALIDATION.md`

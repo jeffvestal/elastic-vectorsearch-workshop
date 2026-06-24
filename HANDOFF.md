@@ -31,10 +31,8 @@ instruqt/
   03-hybrid-search/          Lab 3: RRF + linear combination, the heart (40 min)
   04-why-it-matters/         Lab 4: hybrid + LLM synthesis, pre-baked good/bad context pairs
 
-reference-repo/              Attendee take-home — self-contained, runs against any Serverless project
-  README.md
-  labs/lab1..lab4.ipynb
-  corpus/docs.json + ingest.py
+notebooks/                   Repo-runnable copies of all 4 labs (lab1..lab4.ipynb) — run against any Serverless project
+corpus/                      docs.json (62 docs) + ingest.py + TRAP_QUERY_VALIDATION.md
 
 README.md                    Instructor guide: time budget, pre-event checklist, presenter notes
 ```
@@ -48,7 +46,7 @@ These are **human-gated** — cannot be done by an agent.
 ### 1. Instruqt notebook-tab check (HARD GATE — do this first)
 The outline calls this the top gate before finalizing Lab 4. Lab 4 currently assumes a notebook tab can be opened in the Instruqt sandbox alongside Kibana, pointing at the same ES endpoint.
 
-**Action:** Open the Instruqt track editor. Check if `managed-vm-elastic-9-4-0` sandbox preset supports a notebook/code-server tab. If **yes** → Lab 4 in-room is the notebook. If **no** → Lab 4 in-room becomes instructor-driven notebook on screen; attendees follow along, do it at home with `reference-repo/`.
+**Action:** Open the Instruqt track editor. Check if `managed-vm-elastic-9-4-0` sandbox preset supports a notebook/code-server tab. If **yes** → Lab 4 in-room is the notebook. If **no** → Lab 4 in-room becomes instructor-driven notebook on screen; attendees follow along, do it at home with the repo `notebooks/`.
 
 See `instruqt/track.yml` — there's a `# HARD GATE` comment where the notebook tab would be configured.
 
@@ -62,17 +60,15 @@ pip install elasticsearch
 python ingest.py
 ```
 
-Verify: `GET aiewf-workshop-docs/_count` → should return `{"count": 60}`.
+Verify: `GET aiewf-workshop-docs/_count` → should return `{"count": 62}` (60 docs + 2 distractors).
 
 ### 3. Validate trap queries against the live index
 
-Open `corpus/TRAP_QUERY_VALIDATION.md` and run every query. Fill in the "Verified" checkboxes.
+Open `corpus/TRAP_QUERY_VALIDATION.md` and confirm the recorded ranks still hold (they were captured live — re-verify only if the corpus or embedding model changed).
 
-The most critical: **"user can't log in"** paraphrase trap.
-- Semantic query → doc-001 (SAML auth troubleshooting) should appear in top 3
-- BM25 query → doc-001 should NOT appear in top 5
-
-If doc-001 doesn't behave as expected, `TRAP_QUERY_VALIDATION.md` names a fallback doc (doc-002).
+The two most important to spot-check:
+- **`"exit code 137"`** — semantic must rank doc-007 #1 by a *thin* margin over distractor doc-061 (a near-tie); BM25 must rank doc-007 #1 decisively. If doc-007 is no longer a near-tie, re-check distractor docs doc-061/doc-062.
+- **`"notify me when something goes wrong"`** paraphrase trap — semantic → doc-049 (Watcher alerting) #1; BM25 → doc-049 buried (~#5).
 
 ### 4. EIS model availability check
 

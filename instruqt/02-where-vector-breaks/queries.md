@@ -1,10 +1,12 @@
 # Lab 2 — Dev Console Snippets
 
+All ranks below were verified live against the 62-doc workshop corpus (Jina v5, ES 9.5.0).
+
 ---
 
-## Part A — Semantic Queries That Fail on Exact Tokens
+## Part A — Semantic blurs / mis-ranks exact identifiers
 
-### A1 — Exit Code (semantic fails)
+### A1 — Exit code (semantic *blurs*, near-tie)
 
 ```
 GET aiewf-workshop-docs/_search
@@ -20,15 +22,16 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title"]
+  "_source": ["id", "title", "summary"]
 }
 ```
-// Expected: doc-007 (JVM settings, exit code 137) NOT at rank 1
-// Vector maps "exit code 137" → memory/JVM concepts → returns similar-topic but wrong docs
+// Expected: doc-007 #1 (~0.680) but a `distractor` doc (doc-061) is #2 at ~0.678 — a ~0.001 gap.
+// Top 5 all within ~0.05. The number "137" barely discriminates; ranking is essentially noise.
+// Two distractor docs (doc-061, doc-062) describe exit codes / crashes WITHOUT the literal "137".
 
 ---
 
-### A2 — Version String (semantic blurs versions)
+### A2 — Bare config value (semantic returns the WRONG doc)
 
 ```
 GET aiewf-workshop-docs/_search
@@ -38,21 +41,21 @@ GET aiewf-workshop-docs/_search
       "query": {
         "semantic": {
           "field": "body_semantic",
-          "query": "8.18 breaking changes"
+          "query": "new_primaries"
         }
       }
     }
   },
   "size": 5,
-  "_source": ["id", "title", "version_tags"]
+  "_source": ["id", "title", "summary"]
 }
 ```
-// Expected: doc-057 (8.18), doc-058 (8.15), doc-006 (9.0) all appear with similar scores
-// Vector treats all three "breaking changes" pages as semantically equivalent — can't pin version
+// Expected: #1 is doc-021 (Red/yellow cluster health) — WRONG. doc-008 (shard allocation,
+// where new_primaries is documented) is only #2. Right neighborhood, wrong document.
 
 ---
 
-### A3 — Exact Setting Name (semantic approximates)
+### A3 — Distinctive dotted key (semantic gets it RIGHT — honesty check)
 
 ```
 GET aiewf-workshop-docs/_search
@@ -62,23 +65,23 @@ GET aiewf-workshop-docs/_search
       "query": {
         "semantic": {
           "field": "body_semantic",
-          "query": "xpack.security.authc.realms configuration"
+          "query": "cluster.routing.allocation.enable"
         }
       }
     }
   },
   "size": 5,
-  "_source": ["id", "title"]
+  "_source": ["id", "title", "summary"]
 }
 ```
-// Expected: generic security/config docs — not the exact page with this setting name
-// The dotted setting name gets embedded as "security authentication" semantics — misses the exact match
+// Expected: doc-008 #1 (~0.79). A long, distinctive dotted key embeds well.
+// Lesson: exact identifiers are a RELIABILITY problem for vectors, not a guaranteed miss.
 
 ---
 
-## Part B — BM25 Rescue (exact tokens win)
+## Part B — BM25 is decisive on exact tokens, but mis-ranks a boosted title
 
-### B1 — Exit Code (BM25 wins)
+### B1 — Exit code (BM25 wins decisively)
 
 ```
 GET aiewf-workshop-docs/_search
@@ -95,15 +98,15 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title"]
+  "_source": ["id", "title", "summary"]
 }
 ```
-// Expected: doc-007 at rank 1
-// BM25: "137" is rare in the corpus (high IDF) → exact match scores top
+// Expected: doc-007 #1 by a WIDE margin (~8.4 vs ~6.1, cliff after).
+// "137" is rare (high IDF) and lives only in doc-007 → BM25 pins it unambiguously.
 
 ---
 
-### B2 — Version String (BM25 pins version)
+### B2 — Version string (BM25 ranks the WRONG doc)
 
 ```
 GET aiewf-workshop-docs/_search
@@ -123,39 +126,18 @@ GET aiewf-workshop-docs/_search
   "_source": ["id", "title", "version_tags"]
 }
 ```
-// Expected: doc-057 (8.18 release notes) at rank 1 with a clear margin
-// "8.18" is an exact token — BM25 IDF rewards the doc that says "8.18" specifically
+// Expected: doc-006 "Elasticsearch breaking changes" #1 (~12.9) — WRONG.
+// doc-057 (8.18 release notes), the doc the user wants, is only #2 (~7.4).
+// WHY: doc-006's TITLE is literally "breaking changes" and title is ^3-boosted
+// (title:breaking ~6.5 + title:changes ~6.5 = ~12.9). doc-057 matches rare "8.18"
+// (~5.8) but its title lacks "breaking changes". Field-boost effect, NOT term frequency.
+// Run the SAME query as semantic (A-style) → doc-057 #1. They fail on opposite shapes.
 
 ---
 
-### B3 — Exact Setting Name (BM25 wins)
+## Part C — Paraphrase: BM25 buries it, semantic finds it
 
-```
-GET aiewf-workshop-docs/_search
-{
-  "retriever": {
-    "standard": {
-      "query": {
-        "multi_match": {
-          "query": "xpack.security.authc.realms configuration",
-          "fields": ["title^3", "body"],
-          "type": "best_fields"
-        }
-      }
-    }
-  },
-  "size": 5,
-  "_source": ["id", "title"]
-}
-```
-// Expected: doc-001, doc-005 (pages with exact realm config setting names) rank top
-// "xpack.security.authc.realms" is a very high-IDF rare token — BM25 pins the right docs
-
----
-
-## Part C — The Paraphrase Pair (HIGHEST-RISK LIVE MOMENT)
-
-### C1 — "user can't log in" → Semantic wins
+### C1 — "notify me when something goes wrong" → Semantic wins
 
 ```
 GET aiewf-workshop-docs/_search
@@ -165,22 +147,22 @@ GET aiewf-workshop-docs/_search
       "query": {
         "semantic": {
           "field": "body_semantic",
-          "query": "user can't log in"
+          "query": "notify me when something goes wrong"
         }
       }
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
-// Expected: doc-001 (SAML authentication troubleshooting) at rank 1 or 2
-// WHY it works: "user can't log in" ≈ "authentication failure, credential error, realm config" in Jina v5 embedding space
-// doc-001 body: 0 occurrences of "log in" / "login" — 29+ occurrences of "authentication", "credential", "realm"
+// Expected: doc-049 (Watcher alerting) #1 (~0.75).
+// doc-049 body uses trigger/condition/actions/webhook — NONE of the query words.
+// Semantic maps query and doc to the same region by MEANING.
 
 ---
 
-### C2 — "user can't log in" → BM25 fails
+### C2 — "notify me when something goes wrong" → BM25 buries it
 
 ```
 GET aiewf-workshop-docs/_search
@@ -189,7 +171,7 @@ GET aiewf-workshop-docs/_search
     "standard": {
       "query": {
         "multi_match": {
-          "query": "user can't log in",
+          "query": "notify me when something goes wrong",
           "fields": ["title^3", "body"],
           "type": "best_fields"
         }
@@ -197,13 +179,13 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
-// Expected: doc-001 NOT in top 5
-// WHY it fails: BM25 tokenizes {"user", "can't", "log", "in"} — doc-001 contains none of these as authentication terms
-// BM25 score for doc-001 = 0 (or very low from "user" appearing in unrelated context)
-// BM25 returns docs with "user" or "in" in title — semantically wrong
+// Expected: doc-049 NOT in the top few (buried ~#5). Top BM25 hits share an incidental
+// common word, not the alerting concept. None of {notify, something, goes, wrong}
+// appear in doc-049, so its score is tiny.
+// Note: BURIED, not "zero" — a real index still returns it, just too low to be useful.
 
-// THIS IS THE AHA MOMENT: doc-001 describes exactly the user's problem. BM25 can't find it.
-// You need both methods.
+// THE AHA: doc-049 describes exactly what the user wants. BM25 can't surface it; semantic can.
+// And on B2, semantic was right where BM25 was wrong. You need both.

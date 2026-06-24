@@ -39,6 +39,12 @@ INDEX_MAPPING = {
                     "keyword": {"type": "keyword"}
                 }
             },
+            # One-line neutral description of each doc, shown in result tables so
+            # attendees can see *what* a doc is about. NOT copied into body_semantic,
+            # so it does not influence embeddings or rankings.
+            "summary": {
+                "type": "text"
+            },
             "url": {
                 "type": "keyword"
             },
@@ -115,6 +121,7 @@ def generate_actions(docs: list[dict]):
             "_source": {
                 "id": doc["id"],
                 "title": doc["title"],
+                "summary": doc.get("summary", ""),
                 "url": doc["url"],
                 "body": doc["body"],
                 # semantic_text: ES will auto-embed this via EIS at index time
@@ -175,13 +182,13 @@ def verify(es: Elasticsearch) -> None:
             }
         },
         size=3,
-        source=["id", "title", "trap_type"],
+        source=["id", "title", "summary"],
     )
     hits = result["hits"]["hits"]
     print(f"Top {len(hits)} results:")
     for hit in hits:
         src = hit["_source"]
-        print(f"  [{src['id']}] {src['title']} (trap_type: {src.get('trap_type')})")
+        print(f"  [{src['id']}] {src['title']} — {src.get('summary', '')}")
 
 
 def main():

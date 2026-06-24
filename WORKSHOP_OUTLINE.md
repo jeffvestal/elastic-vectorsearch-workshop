@@ -63,7 +63,7 @@ Each lab has two surfaces:
 
 ## The Corpus
 
-60 Elasticsearch documentation documents, hand-engineered to demonstrate specific retrieval failure modes:
+62 Elasticsearch documentation documents (60 + 2 distractors), hand-engineered to demonstrate specific retrieval failure modes. Each doc carries a one-line neutral `summary` shown in query results so attendees can see what a hit is about; `trap_type` is retained for filtering (and the Lab 4 DLS demo) but is **not** displayed in learner-facing results — it would spoil the trick. Non-trap docs have `trap_type: null`.
 
 | trap_type | Docs | What it tests |
 |-----------|------|---------------|
@@ -71,7 +71,8 @@ Each lab has two surfaces:
 | `exact-token` | doc-003–005, 007, 008 | Specific codes, config keys, version numbers; only BM25 finds them |
 | `version-specific` | doc-006, 056–058 | Version-tagged release notes; filtering + BM25 required |
 | `near-duplicate` | doc-009, 010 | Almost identical documents; tests ranking precision |
-| filler | doc-011–055, 059, 060 | Noise; realistic background |
+| `distractor` | doc-061, 062 | Semantic near-neighbors for `exit code 137` with no literal "137" — make the semantic near-tie real |
+| filler (`null`) | doc-011–055, 059, 060 | Noise; realistic background |
 
 ---
 
@@ -105,7 +106,7 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 The word "TLS" does not appear in the query. The top result is the TLS cluster communications document. That is semantic matching.
@@ -136,38 +137,33 @@ When you run a `semantic` query:
 
 ---
 
-## Lab 2 — Where Vector Breaks (and Lexical's Own Gap)
+## Lab 2 — Where Each Search Breaks (and Why You Need Both)
 
-**Thesis:** Embeddings compress exact tokens — version numbers, error codes, config keys — into generic semantic clusters. The specific number or string is lost. BM25 rescues this. But BM25 has the mirror-image failure: zero lexical overlap = zero score, even when the document is obviously relevant.
+**Thesis:** Neither retriever wins everywhere. Semantic *blurs* exact identifiers — it can't reliably rank the one token that matters, though sometimes it nails them. BM25 has two failure modes of its own: it can rank the **wrong** exact match (a boosted common-word title beating the rare token the user cared about), and it **buries** docs that share no vocabulary with a paraphrase. (Jina v5 is strong enough that the old "vector can't find exact tokens at all" framing does not reproduce — the honest story is reliability, not blindness.)
 
 ### Dev Console Steps
 
-**Part A — Break vector with exact tokens**
+**Part A — Semantic blurs / mis-ranks exact identifiers**
+- `"exit code 137"` → `doc-007` is semantic #1 but only ~0.001 ahead of a distractor that lacks "137" — a near-tie, the ranking is essentially noise. BM25 pins `doc-007` decisively.
+- `"new_primaries"` → semantic returns the WRONG doc at #1 (a cluster-health page); the real settings doc `doc-008` is #2. BM25 pins `doc-008`.
+- `"cluster.routing.allocation.enable"` → honesty check: semantic gets `doc-008` #1. A long distinctive key embeds well. Reliability problem, not a guaranteed miss.
 
-Run the semantic query with each of these strings. Observe that the correct document is NOT at rank 1:
-- `"exit code 137"` — JVM OOMKilled doc (`doc-007`) should be #1; semantic misses it
-- `"8.18 breaking changes"` — semantic blurs 8.15 / 8.18 / 9.0 release notes
-- `"xpack.security.authc.realms configuration"` — exact config key; semantic returns generic security docs
-
-**Part B — BM25 rescues exact tokens**
-
-Switch the retriever to `multi_match` on `title^3, body`. Same queries. The correct documents appear at rank 1. Exact token matching works.
+**Part B — BM25 is decisive on rare tokens, but mis-ranks a boosted title**
+- `"exit code 137"` via `multi_match` → `doc-007` #1 by a wide margin (rare token "137", high IDF).
+- `"8.18 breaking changes"` via `multi_match` → BM25 ranks the WRONG doc `doc-006` ("Elasticsearch breaking changes") #1; the 8.18 page `doc-057` is only #2. Its `title^3`-boosted common words beat the rare `8.18` token. (Semantic gets this one right.)
 
 **Part C — Break BM25 with a paraphrase**
 
-Run `"user can't log in"` through BM25. The SAML authentication troubleshooting doc (`doc-001`) contains zero instances of the word "login" — it uses "authentication", "identity provider", "assertion". BM25 score = effectively zero. The doc is invisible.
-
-Run the same query through semantic. `doc-001` appears in the top 3.
+Run `"notify me when something goes wrong"` through BM25. The Watcher alerting doc (`doc-049`) uses "trigger / condition / actions / webhook" — none of the query words — so BM25 buries it (~#5). Run the same query through semantic: `doc-049` is #1.
 
 ### Notebook Deep-Dive (`lab2-where-vector-breaks.ipynb`)
 
 - `compare(query)` helper — runs semantic and BM25 side by side, prints both ranked tables in one call
-- All 4 trap queries compared side by side
-- **The embedding compression aha:** "137" maps to the same vector neighborhood as other error codes. The number itself is not discriminative in high-dimensional space.
-- **Why zero lexical overlap kills BM25:** the tf/idf formula; if a term doesn't appear, its tf = 0, its contribution = 0
-- `es.search(..., explain=True)` on a BM25 query — print the `_explanation` tree showing term contributions, IDF values, field boosts
-- Why we do NOT `explain` the semantic query: semantic explain trees are hundreds of nested per-chunk similarity scores, unreadable on stage
-- **Core tension table:** vector wins at meaning / paraphrase; BM25 wins at exact tokens / codes / versions; neither wins universally
+- **The blur aha:** "137" maps to the "process killed" neighborhood; distractor docs sit ~0.001 away. The number isn't discriminative in high-dimensional space.
+- **The BM25 boosted-title aha:** `explain=True` on `"8.18 breaking changes"` shows `doc-006`'s title clause (~12.9) beating `doc-057`'s rare-token match (~7.4) — a field-boost effect, NOT term frequency.
+- **The second BM25 `explain`:** on `"exit code 137"`, the rare token "137" contributes the largest term weight — the signal vector search couldn't replicate.
+- **Why zero lexical overlap buries a doc:** the tf/idf formula; if a term doesn't appear, its tf = 0. *Buried*, not literally zero — a real index still returns it, just too low to use.
+- **Core tension table:** semantic blurs exact identifiers and can mis-rank bare tokens; BM25 mis-ranks on boosted common words and goes blind to paraphrase; neither wins universally.
 
 ---
 
@@ -185,21 +181,23 @@ GET aiewf-workshop-docs/_search
   "retriever": {
     "rrf": {
       "retrievers": [
-        { "standard": { "query": { "multi_match": { "query": "user can't log in", "fields": ["title^3", "body"] } } } },
-        { "standard": { "query": { "semantic": { "field": "body_semantic", "query": "user can't log in" } } } }
+        { "standard": { "query": { "multi_match": { "query": "notify me when something goes wrong", "fields": ["title^3", "body"] } } } },
+        { "standard": { "query": { "semantic": { "field": "body_semantic", "query": "notify me when something goes wrong" } } } }
       ],
       "rank_constant": 60,
       "rank_window_size": 100
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-Test against both Lab 2 failure queries:
-- `"exit code 137"` — BM25 sub-retriever wins this arm; hybrid surfaces `doc-007`
-- `"user can't log in"` — semantic sub-retriever wins this arm; hybrid surfaces `doc-001`
+Test against each Lab 2 failure — whichever sub-retriever was right carries the fusion:
+- `"notify me when something goes wrong"` — semantic wins this arm; hybrid surfaces `doc-049` at #1 (BM25 buried it)
+- `"8.18 breaking changes"` — semantic wins this arm; hybrid surfaces `doc-057` at #1 (BM25 ranked the wrong doc)
+- `"new_primaries"` — BM25 wins this arm; hybrid surfaces `doc-008` at #1 (semantic picked the wrong doc)
+- `"exit code 137"` — BM25 wins this arm; hybrid keeps `doc-007` at #1 (semantic was a near-tie)
 
 **Why RRF, not score addition:** BM25 scores are unbounded tf/idf values (e.g. 12.7). Semantic scores are bounded cosine similarities (e.g. 0.84). Adding `12.7 + 0.84` is meaningless. RRF uses only rank position — no normalization needed.
 
@@ -222,13 +220,13 @@ Try shifting weights: `0.8` BM25 / `0.2` semantic for exact-token-heavy workload
 
 ### Notebook Deep-Dive (`lab3-hybrid-search.ipynb`)
 
-**Objective measurement — Recall@K**
+**Objective measurement — rank of the known-good doc**
 
-Define a judgment set: the 4 trap queries with their known-correct document IDs. For each query, run BM25, semantic, and RRF. Count the known-good document in the top-K results. Print a Recall@5 table.
+Define a judgment set: the trap queries with their known-correct document IDs. For each query, run BM25, semantic, and RRF and report the **rank** of the target. (Not Recall@5: in a 62-doc corpus a "losing" retriever often still squeaks the target into the top 5, so Recall@5 ≈ 1.0 everywhere and hides the contrast — rank shows which retriever mis-ordered it and whether fusion fixed it.)
 
 > Note: The native `_rank_eval` API only accepts `query` bodies — it cannot score `rrf` or `linear` retrievers. This Python loop is the correct approach for evaluating hybrid retrieval.
 
-Expected result: RRF wins on average recall, fixing the failure cases of each individual approach.
+Result: RRF lands the target at #1 on every trap query, even the ones where semantic OR BM25 mis-ranked it.
 
 **Filtered hybrid retrieval**
 
@@ -302,7 +300,7 @@ Two retrieval modes:
 **Step 1: Retrieve — watch what comes back**
 
 ```python
-docs = hybrid_search("user can't log in")
+docs = hybrid_search("notify me when something goes wrong")
 ```
 
 Print titles, scores, and body previews. See exactly what the LLM will read.

@@ -3,9 +3,9 @@ slug: where-vector-breaks
 id: hir00y6ebc0g
 type: challenge
 title: Lab 2 — Where Vector Breaks (and Lexical's Own Gap)
-teaser: Break the Lab 1 high. Discover where pure semantic search fails on exact tokens.
-  BM25 rescues it — then falls on paraphrases. Both methods are weak where the other
-  is strong.
+teaser: Break the Lab 1 high. See semantic search blur exact identifiers, BM25 mis-rank
+  a boosted title, and BM25 go blind to paraphrase. Both methods are weak where the
+  other is strong.
 tabs:
 - id: nyzkqbhzqoo7
   title: Elastic Cloud Serverless
@@ -44,9 +44,9 @@ Part 1 — Dev Console
 
 ***
 
-## Part A — Break vector search with exact tokens
+## Part A — Watch vector search *blur* an exact identifier
 
-Let's start with a query for a specific error code. Copy this into the Dev Console and run it:
+We seeded the corpus with two `distractor` docs that talk about exit codes and process crashes *generically* — neither contains the literal number `137`. Only `doc-007` (JVM / OOMKilled) does. Run the query both ways:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -62,15 +62,15 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-> **What you should see:** The document about OOM-killed processes (exit code 137 = kernel killed the process) is **not** in the top results. You'll see generic memory or crash docs instead.
+> **What you should see:** `doc-007` is probably #1 — **but by a razor-thin margin** (score ~0.68), with a `distractor` doc at #2 only ~0.001 behind, and the top 5 all crammed within ~0.05. The exact number `137` barely moves the ranking.
 >
-> **Why this fails:** Semantic search compresses text into a meaning vector. The number `137` gets compressed into a general "error/crash" region of vector space — indistinguishable from `136`, `139`, or any other exit code. The exact integer is lost. Semantic search is great at meaning, but meaning can't distinguish `137` from `138`.
+> **Why this is the real failure:** semantic search isn't "missing" the doc — it *can't reliably rank* it. The model embedded "exit code 137" as the general concept "a process was killed," and in that neighborhood the OOM doc and the generic crash docs are nearly the same point in vector space. Add one more similar doc, re-embed, or change a chunk, and #1 flips to a doc that doesn't even contain `137`. "Usually #1" is not good enough when a user pastes an exact code.
 
-Now run these two more to see the same pattern:
+Now a query semantic gets outright **wrong** — a bare config value:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -80,19 +80,19 @@ GET aiewf-workshop-docs/_search
       "query": {
         "semantic": {
           "field": "body_semantic",
-          "query": "8.18 breaking changes"
+          "query": "new_primaries"
         }
       }
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type", "version_tags"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-> **What you should see:** Results include docs about 8.15, 8.17, or 9.0 breaking changes — not specifically 8.18.
->
-> **Why this fails:** `8.18` and `8.15` are semantically identical (both mean "a specific Elasticsearch version"). The vector model can't tell them apart because they *mean* the same thing. Only exact token matching can distinguish version strings.
+> **What you should see:** the #1 result is a *cluster-health troubleshooting* doc — **not** `doc-008`, the shard-allocation settings page where `new_primaries` is actually documented. The model only had a bare token with no sentence around it, guessed the topic ("something about cluster state"), and landed in the right neighborhood but the wrong document.
+
+And the honest counter-example — semantic is **not** always wrong on identifiers:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -102,25 +102,25 @@ GET aiewf-workshop-docs/_search
       "query": {
         "semantic": {
           "field": "body_semantic",
-          "query": "xpack.security.authc.realms configuration"
+          "query": "cluster.routing.allocation.enable"
         }
       }
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-> **What you should see:** Generic security/auth docs, but not the specific `xpack.security.authc.realms` settings reference.
+> **What you should see:** `doc-008` at #1. A long, distinctive dotted key embeds into its own corner of vector space, so the model nails it.
 >
-> **Why this fails:** That dotted config key is a precise identifier. Semantic search sees "something about realm configuration" and returns broadly related security docs — it doesn't anchor on the exact string.
+> **The takeaway:** exact identifiers aren't a guaranteed semantic *miss* — they're a **reliability** problem. Sometimes the model nails them, sometimes it blurs them, sometimes it picks a plausible neighbor. You can't predict which.
 
 ***
 
-## Part B — BM25 rescues exact tokens
+## Part B — BM25 is decisive on exact tokens (and shows its own trap)
 
-BM25 (the classic keyword search algorithm) works on exact token matching and term frequency. Copy this into the Dev Console:
+BM25 (the classic keyword algorithm) scores exact token matches weighted by rarity (IDF). Run `exit code 137` through it:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -137,21 +137,44 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-> **What you should see:** The OOM-killed processes doc is now at rank 1 (or very close to it).
+> **What you should see:** `doc-007` at #1 by a **wide, decisive margin** (~8 vs ~6 and a cliff after). The rare token `137` appears in exactly one doc; IDF rewards it heavily. Where semantic was a near-tie, BM25 is unambiguous — exactly what you want for an exact identifier.
+
+But BM25 has its *own* blind spot. Run a version query:
+
+```
+GET aiewf-workshop-docs/_search
+{
+  "retriever": {
+    "standard": {
+      "query": {
+        "multi_match": {
+          "query": "8.18 breaking changes",
+          "fields": ["title^3", "body"],
+          "type": "best_fields"
+        }
+      }
+    }
+  },
+  "size": 5,
+  "_source": ["id", "title", "summary", "version_tags"]
+}
+```
+
+> **What you should see:** BM25 ranks `doc-006` *"Elasticsearch breaking changes"* at #1 — the **wrong** doc. The `8.18` release-notes page (`doc-057`), which the user actually wants, is only #2.
 >
-> **Why BM25 wins here:** BM25 tokenizes `exit code 137` into three separate tokens and scores documents that contain those exact tokens. Documents containing all three — especially `137` — score highest. The exact number is preserved, not compressed.
+> **Why BM25 gets it wrong:** `doc-006`'s *title* is literally "breaking changes," and `title` is boosted `^3`, so those two common words score ~6.5 each (~12.9 total). `doc-057` matches the rare token `8.18` strongly (~5.8) but its title lacks "breaking changes," topping out ~7.4. BM25 rewarded the **boosted common-word title** over the **rare token the user cared about**. (This is a field-boost effect, not "term frequency" — `doc-006` doesn't win by repetition.)
 >
-> **The difference from semantic:** BM25 is a counting algorithm. It asks "how often does this exact word appear in this document, relative to the corpus?" Semantic asks "how similar is the meaning of this query to this document?" For exact codes and identifiers, counting wins.
+> Run the same `8.18 breaking changes` query as a `semantic` query and you'll see the opposite: semantic ranks `doc-057` #1, because it understood you wanted the 8.18 page. The two retrievers fail on *opposite* query shapes.
 
 ***
 
-## Part C — Now break BM25 with a paraphrase
+## Part C — Break BM25 with a paraphrase
 
-Run this semantic query:
+Our corpus has `doc-049` about **Watcher** (Elasticsearch's alerting system). It talks about `trigger`, `condition`, `actions`, `webhook` — but never the words "notify," "something," or "goes wrong." Run a paraphrased query as semantic:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -161,21 +184,19 @@ GET aiewf-workshop-docs/_search
       "query": {
         "semantic": {
           "field": "body_semantic",
-          "query": "user can't log in"
+          "query": "notify me when something goes wrong"
         }
       }
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-> **What you should see:** A SAML / authentication troubleshooting doc in the top 3 results.
->
-> **Why semantic wins:** The user said "log in" but the doc talks about "authentication failure" and "identity provider." Different words, same concept. Semantic search maps both into the same region of vector space.
+> **What you should see:** `doc-049` (Watcher alerting) at #1. "Notify me when something goes wrong" *is* the meaning of alerting — semantic maps the query and the doc into the same region of vector space despite zero shared words.
 
-Now run the same query with BM25:
+Now the same query with BM25:
 
 ```
 GET aiewf-workshop-docs/_search
@@ -184,7 +205,7 @@ GET aiewf-workshop-docs/_search
     "standard": {
       "query": {
         "multi_match": {
-          "query": "user can't log in",
+          "query": "notify me when something goes wrong",
           "fields": ["title^3", "body"],
           "type": "best_fields"
         }
@@ -192,13 +213,13 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
-> **What you should see:** The SAML authentication doc is **not** in the top 5. Completely different results.
+> **What you should see:** `doc-049` is **buried** — outside the top few. BM25's top hits are docs that happen to share an incidental common word, not docs about alerting.
 >
-> **Why BM25 fails here:** BM25 looks for the tokens `user`, `can't`, `log`, `in`. The SAML troubleshooting doc doesn't contain any of those words — it uses "authentication," "principal," "identity provider." Zero token overlap = zero BM25 score. The doc is invisible to keyword search no matter how relevant it actually is.
+> **Why BM25 fails here:** BM25 only scores query terms that appear in the doc. None of "notify," "something," "goes," "wrong" are in the Watcher page, so its score is tiny and it sinks. (Note: *buried*, not "zero" — a real index still returns it, just too low to be useful.)
 
 ***
 
@@ -206,12 +227,15 @@ GET aiewf-workshop-docs/_search
 
 Both methods are strong — and both have a fundamental blind spot:
 
-| Method | Wins at | Fails at |
-|--------|---------|---------|
-| Semantic (vector) | Natural language, paraphrases, intent | Exact tokens, version numbers, error codes |
-| BM25 (lexical) | Exact tokens, version strings, config keys | Paraphrases, synonyms, intent |
+| Query | Semantic | BM25 |
+|-------|----------|------|
+| `exit code 137` (exact id) | ⚠️ #1 but by ~0.001 — unreliable | ✅ decisive #1 |
+| `new_primaries` (bare value) | ❌ wrong doc at #1 | ✅ pins the right doc |
+| `cluster.routing.allocation.enable` | ✅ #1 — sometimes it nails them | ✅ also strong |
+| `8.18 breaking changes` (version) | ✅ #1 (understands intent) | ❌ wrong doc #1 (boosted title) |
+| `notify me when something goes wrong` | ✅ #1 | ❌ buried (no shared words) |
 
-**The insight:** A real user base sends both query types. You can't know in advance which kind is coming.
+**The insight:** Neither retriever is safe alone. Semantic blurs the tokens that must stay exact and can mis-rank bare identifiers; BM25 is precise on rare tokens but gets fooled by boosted common words and goes blind to paraphrase. A real user base sends *all* of these query shapes — and you can't know in advance which is coming.
 
 **Next step:** combine both into a single retriever that wins on all query types — but first, the notebook.
 

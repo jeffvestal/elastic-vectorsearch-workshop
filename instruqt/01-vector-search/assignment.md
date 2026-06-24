@@ -90,7 +90,7 @@ GET aiewf-workshop-docs/_search
     }
   },
   "size": 5,
-  "_source": ["id", "title", "trap_type"]
+  "_source": ["id", "title", "summary"]
 }
 ```
 
