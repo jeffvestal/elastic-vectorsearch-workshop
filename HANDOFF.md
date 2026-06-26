@@ -1,7 +1,7 @@
 # Handoff — elastic-vectorsearch-workshop
 
-**Updated:** 2026-06-24
-**Workshop:** AI Engineer World's Fair, June 29 — 5 days out
+**Updated:** 2026-06-26
+**Workshop:** AI Engineer World's Fair, June 29 — 3 days out
 **Repo:** https://github.com/jeffvestal/elastic-vectorsearch-workshop (public)
 
 This file captures context a fresh session can't pick up from a code scan. Everything
@@ -9,15 +9,34 @@ mechanical (file layout, query content, cell structure) is in the code and `READ
 
 ---
 
-## Current state (as of 2026-06-24)
+## Current state (as of 2026-06-26)
 
-All four labs have been **verified live** against a real Serverless cluster (ES 9.5.0,
-Jina v5 embeddings). Every trap query's SEM/BM25/RRF rank was confirmed, all notebooks
-execute end-to-end clean, and the EIS LLM calls return. This is a big change from the
-prior handoff ("nothing tested against a live cluster") — the labs now match their output.
+All four labs **verified live** against a real Serverless cluster (ES 9.5.0, Jina v5).
+Every trap query's SEM/BM25/RRF rank confirmed, all notebooks execute end-to-end clean,
+EIS LLM calls return.
 
-`main` is the source of truth and is pushed. The Instruqt track is pushed too. See
-"Two delivery paths" below — this bit is non-obvious and bit us once.
+**This session (2026-06-26) added reviewer-requested content, all verified live:**
+- **Lab 3 eval (the reviewer's "weak link" fix):** two new cells after the linear-weights
+  demo — (1) an MRR weight-sweep that scores every BM25/semantic linear split against the
+  `JUDGMENTS` set and compares the best to RRF; (2) a strategies×queries **heatmap**
+  (matplotlib, with a text-grid fallback). Live numbers: BM25 0.675, Semantic 0.875,
+  RRF 1.000; best linear (sem 0.6–0.7) **ties** RRF only after measuring, while 0.5/0.5
+  scores 0.750. RRF is the only all-green heatmap row. This is the "measure it, don't
+  assert it" story the reviewer wanted.
+- **Lab 4 multi-hop fix:** the hand-rolled agent now reliably fires ≥2 hops. The old bug
+  was threefold — prompt said "use LOOKUP only once," the demo question was single-hop,
+  and `startswith("ANSWER:")` missed the model's `# ANSWER:`. New prompt invites one
+  focused follow-up; `parse_action()` strips markdown + matches the token case-insensitively;
+  demo question is now genuinely two-part (yellow/unassigned shards → allocation-explain API).
+- **Lab 4 Part 3 — Agent Builder closer (NEW finale):** the Lab 3 RRF retriever, expressed
+  as one ES|QL `FORK … FUSE` statement, registered as an Agent Builder **tool**; a multi-hop
+  **agent** wired to it; both created via the Kibana API. Notebook runs it through `converse`
+  (shows ≥2 tool calls), then attendees drive it in the AB Kibana UI. See "Agent Builder"
+  section below — several non-obvious facts there.
+
+`main` is the source of truth. See "Two delivery paths" below — non-obvious, bit us once.
+**This session's changes were NOT yet committed/pushed at handoff time if you're reading a
+fresh clone — check `git log`.**
 
 ---
 
@@ -74,6 +93,40 @@ The Elastic Inference Service `chat_completion` task type is **streaming-only**.
 non-streaming `_inference/chat_completion` call returns HTTP 400. Lab 4 uses the
 `/_stream` endpoint and parses SSE chunks. If you add an LLM call, use `_stream` (or the
 `completion` task type for non-streaming). Saved in memory as `ref_eis_chat_completion_streaming`.
+
+---
+
+## Agent Builder (Lab 4 Part 3) — non-obvious facts
+
+The new closer creates an AB tool + agent via the **Kibana** API (`/api/agent_builder/...`).
+Several things that cost time this session, so you don't re-discover them:
+
+- **AB is a Kibana API, not ES.** Calls go to `KIBANA_URL` (the `.kb.` host), authenticated
+  by the same `ES_API_KEY`. The notebook + `agent-builder/setup_agent.py` both read
+  `KIBANA_URL`. The sandbox already stored the Kibana endpoint as agent var `ES_KIBANA_URL`;
+  the boot script now also exports it as `KIBANA_URL` and runs `setup_agent.py`.
+- **FUSE == RRF(rank_constant 60).** The Lab 3 hybrid retriever is reproduced *exactly* in
+  ES|QL as `FROM ... | FORK (match body) (match body_semantic) | FUSE`. Verified the ranking
+  is byte-identical to the `_search` `rrf` retriever (doc-049 #1 on the paraphrase query,
+  same scores). `FUSE` needs a `LIMIT` **inside each FORK branch** or you get a 400
+  ("FUSE can only be used on a limited number of rows").
+- **esql tool param type is `string`, not `text`/`keyword`.** The AB tool param schema only
+  accepts string/integer/float/boolean/date/array — NOT ES field types. Using `keyword` or
+  `text` returns a 400. (Cost two failed creates before I read the validation error.)
+- **AB + Workflows are BOTH enabled** on the vector-optimized Serverless project (verified:
+  `/api/agent_builder/tools`, `/api/agent_builder/agents`, `/api/workflows` all 200). We use
+  AB only — no workflow needed, because FUSE gave us hybrid in one ES|QL statement.
+- **Multi-hop is native.** The agent calls its search tool more than once on its own (driven
+  by the system prompt's "How you work" steps); no loop code. Verified live: a two-part
+  question ("exit code 137 — why AND which JVM settings") produced 2 `tool_call` events in
+  the converse trace, grounded answer.
+- **Idempotent provisioning.** `setup_agent.py` deletes the agent then the tool (agent
+  references tool) before recreating — safe to re-run. Tool id `search-workshop-docs-hybrid`,
+  agent id `workshop-docs-agent`.
+- **`instruqt/04-why-it-matters/lab4.ipynb` is the STALE/unused copy.** The sandbox serves
+  `notebooks/lab4-rag-pipeline.ipynb` (that's what's copied to Jupyter and what the tab path
+  points at). The Part 3 + multi-hop fix went into the served notebook ONLY. The instruqt copy
+  was deliberately left alone — see "Open items" for the decision to delete it.
 
 ---
 

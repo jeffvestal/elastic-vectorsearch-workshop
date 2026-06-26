@@ -29,6 +29,22 @@ tabs:
   hostname: kubernetes-vm
   path: /notebooks/lab4-rag-pipeline.ipynb
   port: 8888
+- id: ab9whyittmat
+  title: Agent Builder
+  type: service
+  hostname: kubernetes-vm
+  path: /app/agent_builder
+  port: 30001
+  custom_request_headers:
+  - key: Content-Security-Policy
+    value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
+      style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
+      ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
+  custom_response_headers:
+  - key: Content-Security-Policy
+    value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
+      style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
+      ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
 difficulty: intermediate
 timelimit: 1800
 enhanced_loading: null
@@ -137,9 +153,28 @@ Shows a prompt variant that asks the model to cite sources as `[Source N]`. Run 
 
 A one-liner: `ask("your question here")` — runs hybrid retrieval and synthesis end to end. Try a question about anything in the Elasticsearch docs.
 
-**Cell 13: Multi-hop agent**
+**Cell 13: Multi-hop agent (hand-rolled)**
 
-A minimal agent loop that decides whether to run a follow-up query. Shows that retrieval + synthesis isn't just one-shot — you can chain it, and each hop is still just search + prompt + generate.
+A minimal agent loop that decides whether to run a follow-up query. Two parts of it are easy to get wrong, and the notebook calls them out: the system prompt has to *invite* a second hop (or the model one-shots everything), and the decision has to be parsed robustly (a bare `startswith("ANSWER:")` misses `# ANSWER:`). Run it on a genuinely two-part question and watch it retrieve, decide it needs more, and retrieve again.
+
+***
+
+Part 3 — The same agent in Agent Builder
+========================================
+
+You just hand-rolled the agent loop. Now build the same multi-hop behavior in **Elastic Agent Builder**, where the platform runs the loop for you — you only supply a **tool** and a **system prompt**.
+
+**In the notebook (Part 3 cells):**
+- A cell registers the **hybrid-retrieval tool** — your Lab 3 RRF retriever, expressed as one ES|QL `FORK … FUSE` statement — and a **multi-hop agent** wired to it, both via the Kibana Agent Builder API. (In the sandbox these are pre-created at startup; the cell is idempotent, so re-running it is safe.)
+- A cell calls the agent through the `converse` API and prints its **tool calls** — on a two-part question you'll see it search, read, and search **again** before answering. No loop code on your side.
+
+**Then run it yourself in Kibana:**
+1. Switch to the [button label="Agent Builder"](tab-2) tab.
+2. Select **Workshop Docs Agent**.
+3. Ask a two-part question, e.g. *"My cluster is yellow with unassigned shards — what causes it and how do I use the allocation explain API to fix it?"*
+4. Each **🔧 tool call** in the conversation is a hybrid-retrieval hop. Click one to inspect the ES|QL it ran and the docs it got back — that's your Lab 3 retriever, executing inside the agent.
+
+> **The point of seeing both:** the hand-rolled loop and the Agent Builder agent use the *identical* retriever. The agent framework is the easy part to swap; retrieval quality — what you measured in Labs 2 and 3 — is what determines whether any of it works.
 
 ***
 

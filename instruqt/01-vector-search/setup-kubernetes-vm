@@ -26,13 +26,16 @@ agent variable set ES_KIBANA_URL "$ES_KIBANA"
 
 export ES_ENDPOINT="$ES_URL"
 export ES_API_KEY="$ES_APIKEY"
+export KIBANA_URL="$ES_KIBANA"
 
 echo "ES:     $ES_URL"
 echo "Kibana: $ES_KIBANA"
 echo "Kibana also proxied at http://localhost:30001 (NGINX)"
 
 echo "=== Installing Python dependencies ==="
-pip install 'elasticsearch>=8.17,<9' jupyter requests
+# matplotlib powers the Lab 3 retrieval-strategy heatmap (the cell falls back to a
+# text grid if it's missing, but we install it so the graphical version renders).
+pip install 'elasticsearch>=8.17,<9' jupyter requests matplotlib
 python3 -c "import elasticsearch; print('elasticsearch client:', elasticsearch.__version__)"
 
 echo "=== Cloning workshop repo ==="
@@ -41,6 +44,14 @@ git clone --depth=1 https://github.com/jeffvestal/elastic-vectorsearch-workshop.
 echo "=== Ingesting corpus ==="
 cd /root/workshop/corpus
 python3 ingest.py 2>&1
+
+echo "=== Provisioning Lab 4 Agent Builder agent + tool ==="
+# Creates the hybrid-search tool and multi-hop agent attendees use in Lab 4 Part 3.
+# Idempotent — safe to re-run. KIBANA_URL is exported above. Non-fatal: if Agent
+# Builder isn't ready yet, attendees can run the notebook's setup cell themselves.
+cd /root/workshop/agent-builder
+KIBANA_URL="$ES_KIBANA" python3 setup_agent.py 2>&1 || \
+  echo "WARNING: Agent Builder setup did not complete — attendees can run the Lab 4 setup cell instead."
 
 echo "=== Setting up notebooks ==="
 mkdir -p /root/notebooks

@@ -37,8 +37,8 @@ Drop-in copy for the Instruqt landing page, an invite, or a slide.
 
 - **Lab 1 — Vector Search:** Run semantic queries and see how Elastic generates embeddings (Jina v5) to match on *meaning*, not keywords.
 - **Lab 2 — Where Vector Breaks:** Find the queries that break semantic *and* the ones that break BM25 — and read the scores to see why neither is safe alone.
-- **Lab 3 — Hybrid Search:** Fuse BM25 + semantic with RRF (and linear) into one retriever that wins on every query type that broke the others.
-- **Lab 4 — Why It Matters:** Wire hybrid retrieval to an LLM and prove that same model + worse retrieval = worse answer.
+- **Lab 3 — Hybrid Search:** Fuse BM25 + semantic with RRF (and linear) into one retriever that wins on every query type that broke the others — then measure the win with an MRR weight-sweep and a strategies×queries heatmap.
+- **Lab 4 — Why It Matters:** Wire hybrid retrieval to an LLM, prove that same model + worse retrieval = worse answer, then ship the multi-hop agent in Elastic Agent Builder.
 
 **By the end:** you can build and tune a production hybrid retriever, explain why each method fails where it does, and show that retrieval — not the model — is where RAG answer quality is won.
 
@@ -53,12 +53,12 @@ Drop-in copy for the Instruqt landing page, an invite, or a slide.
 - *Outcome:* You can predict which retriever fails on which query shape — semantic *blurs* exact identifiers, BM25 picks the *wrong* exact match on a boosted title and *buries* paraphrases — and why neither is safe alone.
 
 **Lab 3 — Hybrid Search: best of both**
-- *You'll do:* Compose BM25 + semantic under an RRF retriever, then a linear retriever with MinMax normalization and tunable weights; re-run every Lab 2 trap through the hybrid.
-- *Outcome:* You can build a production hybrid retriever and choose RRF vs. linear deliberately — including seeing a query where the "obvious" weight choice backfires.
+- *You'll do:* Compose BM25 + semantic under an RRF retriever, then a linear retriever with MinMax normalization and tunable weights; re-run every Lab 2 trap through the hybrid. Then **measure** it: sweep the linear weights, score each by MRR over a judgment set, and render a strategies×queries heatmap where RRF is the only all-green row.
+- *Outcome:* You can build a production hybrid retriever, run a weight-tuning eval against a judgment set, and choose RRF vs. linear deliberately — including seeing a query where the "obvious" weight choice backfires and why the best linear weight goes stale.
 
 **Lab 4 — Why It Matters for Agents**
-- *You'll do:* Wire the hybrid retriever to an LLM (Elastic Inference Service), run the same question with good vs. deliberately wrong retrieval, then add citation prompting and a multi-hop agent.
-- *Outcome:* You can build a RAG pipeline and explain why retrieval — not the model — bounds answer quality, and where RBAC/DLS enforce access at the credential, not the prompt.
+- *You'll do:* Wire the hybrid retriever to an LLM (Elastic Inference Service), run the same question with good vs. deliberately wrong retrieval, add citation prompting, build a hand-rolled multi-hop agent, then **rebuild that same agent in Elastic Agent Builder** — a hybrid-search tool + a multi-hop agent you drive in the Kibana UI.
+- *Outcome:* You can build a RAG pipeline, explain why retrieval — not the model — bounds answer quality, see where RBAC/DLS enforce access at the credential (not the prompt), and ship a multi-hop agent in Agent Builder whose retriever is the very one you built in Lab 3.
 
 **Overall, by the end you can:**
 - Run semantic, lexical, and hybrid retrieval in Elasticsearch and explain the mechanics of each
@@ -76,7 +76,7 @@ Drop-in copy for the Instruqt landing page, an invite, or a slide.
 | Lab 1 — Vector: the thing everyone reaches for | ~25 min | Dev Console |
 | Lab 2 — Where vector breaks (and lexical's own gap) | ~25 min | Dev Console |
 | Lab 3 — Hybrid: RRF + linear combination | ~40 min | Dev Console |
-| Lab 4 — Why it matters for agents | ~20 min | Notebook |
+| Lab 4 — Why it matters for agents + Agent Builder | ~25 min | Notebook |
 
 **Total: 120 min.** Buffer is baked into Lab 3 (heaviest cognitive load).
 
@@ -111,6 +111,8 @@ Work through this at least 72h before the event. All items are blocking unless m
 - [ ] **Pre-run Cell 5 (good context)** — verify it produces a clear, accurate answer about Watcher alerting ("How do I get notified when something goes wrong in my cluster?"). Context + answer are pre-baked, but confirm the LLM call returns.
 - [ ] **Pre-run Cell 6 (bad context)** — same question, deliberately off-topic context (ILM/snapshots/pipelines); verify the model answers "I don't have enough information"
 - [ ] **Pre-run Cell 7 (full pipeline)** — verify end-to-end retrieve → synthesize works live (uncached)
+- [ ] **Verify Lab 3 heatmap renders** — confirm matplotlib is installed in the sandbox boot and the MRR weight-sweep cell prints sane numbers (BM25 ~0.675, Semantic ~0.875, RRF 1.000; best linear around sem 0.6–0.7)
+- [ ] **Verify Lab 4 Part 3 (Agent Builder)** — run `agent-builder/setup_agent.py` and confirm HTTP 200 for both tool and agent creation; run the converse cell on the two-part question and confirm ≥2 tool calls appear in the output. Note: Agent Builder and Workflows must be enabled on the Serverless project (verified on the vector-optimized project).
 
 ### Pacing
 
@@ -153,13 +155,15 @@ workshops/aiewf-2026/
 │   │   ├── assignment.md
 │   │   └── queries.md
 │   └── 04-why-it-matters/
-│       ├── assignment.md
-│       └── lab4.ipynb               ← Python RAG notebook
-└── notebooks/                       ← repo-runnable copies of all 4 labs
+│       ├── assignment.md            ← Lab 4 attendee instructions (incl. Part 3: Agent Builder)
+│       └── lab4.ipynb               ← legacy/unused copy (sandbox serves notebooks/lab4-rag-pipeline.ipynb)
+├── agent-builder/
+│   └── setup_agent.py               ← idempotent: creates the Lab 4 Agent Builder tool + multi-hop agent
+└── notebooks/                       ← repo-runnable copies of all 4 labs (the SERVED Lab 4 is here)
     ├── lab1-vector-search.ipynb
     ├── lab2-where-vector-breaks.ipynb
-    ├── lab3-hybrid-search.ipynb
-    └── lab4-rag-pipeline.ipynb
+    ├── lab3-hybrid-search.ipynb     ← + MRR weight-sweep eval and strategies×queries heatmap
+    └── lab4-rag-pipeline.ipynb      ← + Part 3: build & run the agent in Agent Builder
 ```
 
 ---
@@ -193,8 +197,9 @@ workshops/aiewf-2026/
 - After attendees build RRF, have them re-run the Lab 2 trap queries. Watch the room when hybrid wins all 4 simultaneously.
 - Linear: explain MinMax normalization before showing the query. "Scores are on different scales — MinMax makes them comparable."
 - Reranker: instructor-run only, talk through what it does and why it's not in the hands-on
+- After the rank-of-target table, the notebook runs an MRR weight-sweep (BM25/semantic weights across the judgment set) and renders a strategies×queries heatmap. Teaching beat: "the best linear weight only ties RRF *after* you measure it — and it goes stale when the corpus changes. RRF needs zero tuning."
 
-### Lab 4 (~20 min)
+### Lab 4 (~25 min)
 
 - Frame the pipeline before opening the notebook: retrieve → build prompt → generate
 - Cell 5 (good context): read the answer aloud, point to the specific Watcher trigger/condition/action content it grounded on
@@ -202,6 +207,7 @@ workshops/aiewf-2026/
 - After Cell 6: "The model didn't get dumber. The retrieval got worse." — this is the closing line.
 - Cell 7: if time allows, take a question from the audience and run it live through the full pipeline
 - The security section is now two parts: an app `bool.filter` is **not** access control (say so explicitly); RBAC/DLS enforce on the credential's role. The DLS code is shown but not run — the sandbox's managed API key can't mint a restricted child key.
+- Part 3 (closer): attendees build the same multi-hop agent in Agent Builder — the Lab 3 RRF retriever registered as an ES|QL tool, wired to an agent, run via the converse API, then driven in the Kibana UI. Teaching beat: "same retriever, three abstraction levels — the agent framework is swappable, retrieval quality is not."
 
 ---
 

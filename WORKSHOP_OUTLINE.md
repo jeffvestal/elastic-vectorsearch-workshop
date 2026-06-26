@@ -228,6 +228,10 @@ Define a judgment set: the trap queries with their known-correct document IDs. F
 
 Result: RRF lands the target at #1 on every trap query, even the ones where semantic OR BM25 mis-ranked it.
 
+**MRR weight-sweep and strategies×queries heatmap**
+
+After confirming that RRF ranks every target correctly, the notebook sweeps the linear retriever's BM25/semantic weight split (in 0.1 increments) and scores each configuration by MRR over the judgment set. The best linear weight (around sem 0.6–0.7) ties RRF at MRR 1.000 — but only after measurement reveals it; the intuitive 0.5/0.5 equal split scores only 0.750. The notebook then renders a strategies×queries heatmap (matplotlib, text fallback) showing the rank of the correct document for each retriever × query pair. RRF is the only all-green row. The teaching point is concrete: you can match RRF with a tuned linear weight, but the optimal weight is corpus- and workload-dependent, it goes stale when either changes, and finding it requires a judgment set most teams don't maintain. RRF needs zero tuning.
+
 **Filtered hybrid retrieval**
 
 Add a `bool.filter` inside each sub-retriever's standard query to scope to `version_tags: "8.18"`:
@@ -374,17 +378,21 @@ ask("How do I monitor shard allocation in Elasticsearch?")
 
 One-liner: `hybrid_search` → `synthesize` → print answer.
 
-**Multi-hop retrieval agent (take-home)**
+**Multi-hop retrieval agent**
 
-A minimal agent loop using the Inference API to decide whether a follow-up retrieval is needed:
+A hand-rolled agent loop in the notebook: retrieve on the user question, ask the LLM whether it can answer or needs a follow-up lookup, and if so retrieve again on the follow-up query before generating the final answer. The prompt explicitly invites a second hop ("if you need more context, output LOOKUP: <query>"), and the parser is robust to markdown formatting (e.g. `# ANSWER:` headers). For a two-part question the agent reliably fires both hops — you can watch the tool calls in the cell output. The LLM uses the same `ES_API_KEY` to call the inference endpoint; no extra infrastructure is needed.
 
 ```python
 def multi_hop_agent(question, max_hops=2):
-    # Hop 1: retrieve → ask LLM: answer or LOOKUP?
-    # If LOOKUP: retrieve on the follow-up query → answer
+    # Hop 1: retrieve → prompt LLM: answer directly or LOOKUP: <follow-up query>
+    # Hop 2 (if needed): retrieve on the follow-up query → final answer
 ```
 
-The LLM uses the same ES_API_KEY to call the inference endpoint. No extra infrastructure. The entire agent runs against your Elastic project.
+**Agent Builder finale**
+
+Part 3 takes the same retriever to a third abstraction level. The notebook (via `agent-builder/setup_agent.py`) registers the Lab 3 RRF hybrid retriever as an Elastic Agent Builder tool — implemented as an ES|QL `FORK … FUSE` query so the retrieval logic lives entirely in Elasticsearch. A multi-hop agent is wired to this tool via the Kibana API. Running the two-part question through the converse API shows ≥2 tool calls in the response, with each hop's retrieved context visible in the trace. Attendees then drive the same agent interactively in the Kibana Agent Builder UI.
+
+The closing beat: the same retriever — the RRF hybrid built in Lab 3 — powers all three abstraction levels: the single-shot RAG cell, the hand-rolled Python loop, and the Agent Builder agent. The agent framework is swappable. Retrieval quality is not.
 
 ---
 
