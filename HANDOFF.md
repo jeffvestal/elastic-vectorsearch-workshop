@@ -176,6 +176,26 @@ but flag it if you ever hit a client/server mismatch.
 
 ---
 
+## Post-event TODO — reranking (Lab 5)
+
+Lab 5 (Reranking) shipped as a **notebook-only bonus placed *after* Lab 4 (Agent Builder)**
+for AIEWF, because we added it the night before and the Agent Builder finale had to stay the
+closer. That ordering is an artifact of the event, not the right pedagogy:
+
+- **For a general / non-AIEWF run, fold reranking into the main arc** — most naturally right
+  **after Lab 3 (hybrid)**, as the *precision stage* on top of recall (RRF → rerank top-N).
+  That's where it belongs conceptually: Lab 3 builds recall, reranking sharpens precision,
+  *then* Lab 4 wires the result to the LLM. Sitting it after the agent closer is backwards.
+- **Make the rerank win vivid:** the 62-doc corpus is too small for reranking to clearly beat
+  RRF (RRF already nails #1). Before promoting Lab 5 to the main flow, add more
+  `distractor` / near-duplicate docs so a rerank stage has hundreds of plausible candidates to
+  reorder — that's the only way the payoff shows on-screen instead of being asserted.
+- **Lab 5 delivery mechanics:** the notebook reaches the sandbox via the setup-script `cp`
+  (guarded with `|| echo` so a not-yet-pushed file can't abort Labs 1–4). The Instruqt
+  challenge page (`instruqt/05-reranking/`) needs platform-minted challenge + tab ids from
+  `instruqt challenge create` — see the Lab 5 plan (`~/.claude/plans/virtual-juggling-bentley.md`)
+  for the HARD BLOCKER and the §2-alt fallback (second notebook tab on Lab 4).
+
 ## Where things live
 
 | Item | Location |

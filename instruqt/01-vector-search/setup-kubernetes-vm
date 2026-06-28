@@ -3,7 +3,7 @@
 # 1. Provisions Elastic Serverless (vector-optimized) via start_serverless.sh
 # 2. Stores credentials as Instruqt agent variables for all challenges
 # 3. Installs Python deps, clones repo, ingests corpus
-# 4. Copies all 4 lab notebooks to /root/notebooks and starts Jupyter on :8888
+# 4. Copies the lab notebooks (4 core + 1 bonus) to /root/notebooks and starts Jupyter on :8888
 #
 # LLM synthesis (Lab 4) uses the Elastic Inference Service — ES_API_KEY authenticates both
 # Elasticsearch queries and LLM calls. No separate Anthropic key required.
@@ -55,12 +55,17 @@ KIBANA_URL="$ES_KIBANA" python3 setup_agent.py 2>&1 || \
 
 echo "=== Setting up notebooks ==="
 mkdir -p /root/notebooks
-# Copy all 4 lab notebooks — Jupyter serves the whole /root/notebooks dir,
+# Copy the lab notebooks (4 core + 1 bonus) — Jupyter serves the whole /root/notebooks dir,
 # so all appear in the browser without requiring separate Instruqt pages.
 cp /root/workshop/notebooks/lab1-vector-search.ipynb /root/notebooks/
 cp /root/workshop/notebooks/lab2-where-vector-breaks.ipynb /root/notebooks/
 cp /root/workshop/notebooks/lab3-hybrid-search.ipynb /root/notebooks/
 cp /root/workshop/notebooks/lab4-rag-pipeline.ipynb /root/notebooks/
+# Bonus Lab 5 (reranking). Guarded: the script runs under `set -euo pipefail`, so if this
+# notebook isn't in the cloned repo yet (e.g. sandbox provisioned before the push landed),
+# a bare cp would abort the WHOLE setup and break Labs 1-4. Skip it instead.
+cp /root/workshop/notebooks/lab5-reranking.ipynb /root/notebooks/ 2>/dev/null || \
+  echo "NOTE: lab5-reranking.ipynb not in repo yet — skipping Lab 5 (bonus)."
 
 echo "=== Starting Jupyter server on :8888 ==="
 # Token and password auth disabled — sandbox is network-isolated.

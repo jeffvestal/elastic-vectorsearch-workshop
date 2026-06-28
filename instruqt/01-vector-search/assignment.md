@@ -5,6 +5,22 @@ type: challenge
 title: 'Lab 1 — Vector Search: The Thing Everyone Reaches For'
 teaser: Run your first semantic queries. Learn how Jina v5 via EIS generates embeddings
   server-side — no client embedding code needed.
+notes:
+- type: text
+  contents: |
+    # Vector → Hybrid → Do You Even Need a Model?
+
+    **The thesis:** in RAG, retrieval quality — not the model — determines answer quality. Over the next two hours you'll build a retriever that wins on every kind of query, then wire it to an LLM and prove that swapping the *retrieval* (not the model) is what changes the answer.
+
+    | Lab | You'll do | Takeaway |
+    | --- | --- | --- |
+    | **1 — Vector Search** | `semantic_text`, EIS, Jina v5, ANN/HNSW | match on *meaning*, not keywords |
+    | **2 — Where It Breaks** | trap queries + BM25 `explain` | neither retriever is safe alone |
+    | **3 — Hybrid** | RRF + linear/MinMax + a measured MRR eval | fuse to win on every query class |
+    | **4 — Why It Matters** | good vs. bad context, RBAC/DLS, a multi-hop agent in Agent Builder | retrieval *bounds* the answer |
+    | **5 — Reranking** *(bonus)* | pointwise vs. listwise, Jina v2/v3 | the precision layer on top |
+
+    **The throughline:** start with RRF, filter for scope, rerank for precision — and remember that a better model can't rescue bad retrieval.
 tabs:
 - id: bn0o5ijt9rls
   title: Elastic Cloud Serverless

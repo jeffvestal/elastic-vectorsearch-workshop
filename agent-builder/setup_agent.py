@@ -86,7 +86,7 @@ TOOL_BODY = {
 # A SKILL specializes the agent for a recurring task. This one is a diagnose-and-fix
 # playbook matching the lab's two-part demo questions (symptom → cause → fix). It
 # references the same hybrid tool, and gets attached to the agent via skill_ids below.
-SKILL_CONTENT = """# Diagnose & Fix playbook
+SKILL_CONTENT = """# Diagnose and Fix playbook
 
 When the user reports an Elasticsearch symptom and wants both *why it happens* and *how to fix it*, work in this order:
 
@@ -101,7 +101,7 @@ Never guess a setting name or a command — if the docs don't contain it, say so
 
 SKILL_BODY = {
     "id": SKILL_ID,
-    "name": "Diagnose & Fix",
+    "name": "Diagnose and Fix",
     "description": (
         "Use when the user reports an Elasticsearch symptom (error code, yellow cluster, "
         "failed login) and wants both the cause and the fix. Drives a two-search "
@@ -140,7 +140,7 @@ AGENT_BODY = {
     "configuration": {
         "instructions": AGENT_INSTRUCTIONS,
         "tools": [{"tool_ids": [TOOL_ID]}],
-        # skill_ids attaches the Diagnose & Fix skill to this agent (a skill is not
+        # skill_ids attaches the Diagnose and Fix skill to this agent (a skill is not
         # active on an agent until explicitly added). If a given Serverless build
         # doesn't accept skill_ids yet, create_agent still succeeds without it and the
         # skill can be attached in the Kibana UI (Customize -> Skills).
@@ -214,7 +214,7 @@ def main():
         sys.exit(f"✗ Tool create failed ({status}): {resp.get('error', resp)}")
     print(f"✓ Tool created:  {TOOL_ID}")
 
-    # 2. Create the Diagnose & Fix skill (references the tool above)
+    # 2. Create the Diagnose and Fix skill (references the tool above)
     status, resp = _req("POST", "/api/agent_builder/skills", SKILL_BODY)
     skill_ok = status == 200
     if skill_ok:

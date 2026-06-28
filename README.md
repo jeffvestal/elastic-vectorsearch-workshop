@@ -39,6 +39,7 @@ Drop-in copy for the Instruqt landing page, an invite, or a slide.
 - **Lab 2 — Where Vector Breaks:** Find the queries that break semantic *and* the ones that break BM25 — and read the scores to see why neither is safe alone.
 - **Lab 3 — Hybrid Search:** Fuse BM25 + semantic with RRF (and linear) into one retriever that wins on every query type that broke the others — then measure the win with an MRR weight-sweep and a strategies×queries heatmap.
 - **Lab 4 — Why It Matters:** Wire hybrid retrieval to an LLM, prove that same model + worse retrieval = worse answer, then ship the multi-hop agent in Elastic Agent Builder.
+- **Lab 5 — Reranking (bonus, notebook-only):** Add a precision layer on top of hybrid — call the rerank API directly, compare **pointwise (cross-encoder) vs. listwise** rerankers (Jina v2 vs. v3), and learn when a rerank stage is worth it.
 
 **By the end:** you can build and tune a production hybrid retriever, explain why each method fails where it does, and show that retrieval — not the model — is where RAG answer quality is won.
 
@@ -59,6 +60,10 @@ Drop-in copy for the Instruqt landing page, an invite, or a slide.
 **Lab 4 — Why It Matters for Agents**
 - *You'll do:* Wire the hybrid retriever to an LLM (Elastic Inference Service), run the same question with good vs. deliberately wrong retrieval, add citation prompting, build a hand-rolled multi-hop agent, then **rebuild that same agent in Elastic Agent Builder** — a hybrid-search tool + a multi-hop agent you drive in the Kibana UI.
 - *Outcome:* You can build a RAG pipeline, explain why retrieval — not the model — bounds answer quality, see where RBAC/DLS enforce access at the credential (not the prompt), and ship a multi-hop agent in Agent Builder whose retriever is the very one you built in Lab 3.
+
+**Lab 5 — Reranking (bonus, notebook-only)**
+- *You'll do:* Take a hybrid candidate set and add a **rerank** stage — call the rerank inference API directly, contrast a **pointwise cross-encoder (Jina Reranker v2)** with a **listwise reranker (Jina Reranker v3)** head-to-head on a near-duplicate pair, and wire the production `text_similarity_reranker` retriever.
+- *Outcome:* You can explain what reranking is and the two-stage recall→precision pattern, choose pointwise vs. listwise deliberately, and decide when a rerank stage is worth adding (and when stage-1 is already crisp enough to skip it).
 
 **Overall, by the end you can:**
 - Run semantic, lexical, and hybrid retrieval in Elasticsearch and explain the mechanics of each
@@ -112,7 +117,7 @@ Work through this at least 72h before the event. All items are blocking unless m
 - [ ] **Pre-run Cell 6 (bad context)** — same question, deliberately off-topic context (ILM/snapshots/pipelines); verify the model answers "I don't have enough information"
 - [ ] **Pre-run Cell 7 (full pipeline)** — verify end-to-end retrieve → synthesize works live (uncached)
 - [ ] **Verify Lab 3 heatmap renders** — confirm matplotlib is installed in the sandbox boot and the MRR weight-sweep cell prints sane numbers (BM25 ~0.675, Semantic ~0.875, RRF 1.000; best linear around sem 0.6–0.7)
-- [ ] **Verify Lab 4 Part 3 (Agent Builder)** — run `agent-builder/setup_agent.py` and confirm the tool, **skill** (Diagnose & Fix), and agent all report created (the skill step is non-fatal — a `⚠` means that build lacks the skills API, attach it in the UI instead); run the converse cell on the two-part question and confirm ≥2 tool calls appear in the output. Note: Agent Builder and Workflows must be enabled on the Serverless project (verified on the vector-optimized project).
+- [ ] **Verify Lab 4 Part 2 (Agent Builder)** — run `agent-builder/setup_agent.py` and confirm the tool, **skill** (Diagnose and Fix), and agent all report created (the skill step is non-fatal — a `⚠` means that build lacks the skills API, attach it in the UI instead); run the converse cell on the two-part question and confirm ≥2 retrieval hops appear in the output (plus a `load_skill` step). Note: Agent Builder and Workflows must be enabled on the Serverless project (verified on the vector-optimized project).
 
 ### Pacing
 
@@ -155,16 +160,21 @@ workshops/aiewf-2026/
 │   │   ├── assignment.md
 │   │   └── queries.md
 │   └── 04-why-it-matters/
-│       ├── assignment.md            ← Lab 4 attendee instructions (incl. Part 3: Agent Builder)
+│       ├── assignment.md            ← Lab 4 attendee instructions (incl. Part 2: Agent Builder)
 │       └── lab4.ipynb               ← legacy/unused copy (sandbox serves notebooks/lab4-rag-pipeline.ipynb)
 ├── agent-builder/
-│   └── setup_agent.py               ← idempotent: creates the Lab 4 Agent Builder tool + Diagnose & Fix skill + multi-hop agent
+│   └── setup_agent.py               ← idempotent: creates the Lab 4 Agent Builder tool + Diagnose and Fix skill + multi-hop agent
 └── notebooks/                       ← repo-runnable copies of all 4 labs (the SERVED Lab 4 is here)
     ├── lab1-vector-search.ipynb
     ├── lab2-where-vector-breaks.ipynb
     ├── lab3-hybrid-search.ipynb     ← + MRR weight-sweep eval and strategies×queries heatmap
-    └── lab4-rag-pipeline.ipynb      ← + Part 3: build & run the agent in Agent Builder
+    ├── lab4-rag-pipeline.ipynb      ← + Part 2: build & run the agent in Agent Builder
+    └── lab5-reranking.ipynb         ← bonus (notebook-only): pointwise vs listwise reranking, Jina v2/v3
 ```
+
+> **Lab 5 is a notebook-only bonus** served from the sandbox Jupyter file browser (and, if the
+> Instruqt CLI gate is cleared before the event, as a Lab 5 challenge tab). It's optional and
+> sits *after* Lab 4 — see `HANDOFF.md` for the post-event note on folding it into the main arc.
 
 ---
 
@@ -207,7 +217,7 @@ workshops/aiewf-2026/
 - After Cell 6: "The model didn't get dumber. The retrieval got worse." — this is the closing line.
 - Cell 7: if time allows, take a question from the audience and run it live through the full pipeline
 - The security section is now two parts: an app `bool.filter` is **not** access control (say so explicitly); RBAC/DLS enforce on the credential's role. The DLS code is shown but not run — the sandbox's managed API key can't mint a restricted child key.
-- Part 3 (closer): attendees build the same multi-hop agent in Agent Builder — the Lab 3 RRF retriever registered as an ES|QL tool, a Diagnose & Fix skill, wired to an agent, run via the converse API, then they tour the agent (Tool / Skills / Custom instructions) and drive it in the Kibana UI. Teaching beat: "same retriever, three abstraction levels — the agent framework is swappable, retrieval quality is not."
+- Part 2 (closer): attendees build the same multi-hop agent in Agent Builder — the Lab 3 RRF retriever registered as an ES|QL tool, a Diagnose and Fix skill, wired to an agent, run via the converse API, then they tour the agent (Tool / Skills / Custom instructions) and drive it in the Kibana UI. Teaching beat: "same retriever, three abstraction levels — the agent framework is swappable, retrieval quality is not."
 
 ---
 

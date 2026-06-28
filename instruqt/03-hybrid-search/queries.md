@@ -233,3 +233,6 @@ GET aiewf-workshop-docs/_search
 // Pattern: hybrid first (fast, cheap) → rerank top-N (expensive, small).
 // NOTE: on a 62-doc corpus RRF already nails #1, so reranking has little room to help — and may
 // shuffle a lexically-similar distractor up. This is a MECHANICS demo; the payoff is real at scale.
+//
+// → Go deeper in the bonus Lab 5 (notebooks/lab5-reranking.ipynb): the rerank API called directly,
+//   pointwise (cross-encoder) vs listwise rerankers, Jina Reranker v2 vs v3, and when to use which.
