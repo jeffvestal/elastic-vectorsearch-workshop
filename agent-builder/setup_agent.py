@@ -39,6 +39,7 @@ ES_API_KEY = os.environ.get("ES_API_KEY")
 INDEX = "aiewf-workshop-docs"
 TOOL_ID = "search-workshop-docs-hybrid"
 AGENT_ID = "workshop-docs-agent"
+SKILL_ID = "workshop-docs-diagnose-fix"
 
 # The Lab 3 hybrid retriever as one ES|QL statement.
 #   FORK runs two sub-queries — a BM25 `match` on `body` and a semantic `match` on
@@ -82,6 +83,34 @@ TOOL_BODY = {
     },
 }
 
+# A SKILL specializes the agent for a recurring task. This one is a diagnose-and-fix
+# playbook matching the lab's two-part demo questions (symptom → cause → fix). It
+# references the same hybrid tool, and gets attached to the agent via skill_ids below.
+SKILL_CONTENT = """# Diagnose & Fix playbook
+
+When the user reports an Elasticsearch symptom and wants both *why it happens* and *how to fix it*, work in this order:
+
+1. **Find the cause.** Search the symptom (the error code, the cluster state, the failure) with `search-workshop-docs-hybrid` to identify the root cause.
+2. **Find the fix.** The first results usually point at a specific API, setting, or subsystem. Run a SECOND search targeting that fix — the exact setting name, the repair API, the config key.
+3. **Answer as Cause → Fix → Citations.**
+   - **Cause:** one or two sentences on what's actually wrong.
+   - **Fix:** the concrete steps, naming the exact settings, commands, or API calls from the docs.
+   - **Citations:** the doc titles you used, as [title].
+
+Never guess a setting name or a command — if the docs don't contain it, say so."""
+
+SKILL_BODY = {
+    "id": SKILL_ID,
+    "name": "Diagnose & Fix",
+    "description": (
+        "Use when the user reports an Elasticsearch symptom (error code, yellow cluster, "
+        "failed login) and wants both the cause and the fix. Drives a two-search "
+        "diagnose-then-repair flow and answers as Cause -> Fix -> Citations."
+    ),
+    "content": SKILL_CONTENT,
+    "tool_ids": [TOOL_ID],
+}
+
 # The agent's system prompt is what turns one tool into a multi-hop agent. The
 # numbered "How you work" steps tell the model to retrieve, read, and run a SECOND
 # focused search when the first results point at a gap (a setting, a root cause, a
@@ -111,6 +140,11 @@ AGENT_BODY = {
     "configuration": {
         "instructions": AGENT_INSTRUCTIONS,
         "tools": [{"tool_ids": [TOOL_ID]}],
+        # skill_ids attaches the Diagnose & Fix skill to this agent (a skill is not
+        # active on an agent until explicitly added). If a given Serverless build
+        # doesn't accept skill_ids yet, create_agent still succeeds without it and the
+        # skill can be attached in the Kibana UI (Customize -> Skills).
+        "skill_ids": [SKILL_ID],
     },
 }
 
@@ -144,6 +178,14 @@ def _delete_quiet(path):
     return status
 
 
+def _without_skill(agent_body):
+    """Return a copy of the agent body with skill_ids stripped — fallback for builds
+    that don't accept it yet, so agent creation still succeeds."""
+    body = json.loads(json.dumps(agent_body))
+    body["configuration"].pop("skill_ids", None)
+    return body
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 
@@ -158,9 +200,12 @@ def main():
     print(f"Kibana: {KIBANA_URL}")
     print(f"Index:  {INDEX}\n")
 
-    # Reset (idempotent): agent references the tool, so delete the agent first.
+    # Reset (idempotent): delete in dependency order — the agent references both the
+    # skill (skill_ids) and the tool, and the skill references the tool, so the agent
+    # must go first, then the skill, then the tool.
     print("Resetting any existing demo objects...")
     _delete_quiet(f"/api/agent_builder/agents/{AGENT_ID}")
+    _delete_quiet(f"/api/agent_builder/skills/{SKILL_ID}")
     _delete_quiet(f"/api/agent_builder/tools/{TOOL_ID}")
 
     # 1. Create the hybrid retrieval tool
@@ -169,13 +214,28 @@ def main():
         sys.exit(f"✗ Tool create failed ({status}): {resp.get('error', resp)}")
     print(f"✓ Tool created:  {TOOL_ID}")
 
-    # 2. Create the multi-hop agent wired to the tool
-    status, resp = _req("POST", "/api/agent_builder/agents", AGENT_BODY)
+    # 2. Create the Diagnose & Fix skill (references the tool above)
+    status, resp = _req("POST", "/api/agent_builder/skills", SKILL_BODY)
+    skill_ok = status == 200
+    if skill_ok:
+        print(f"✓ Skill created: {SKILL_ID}")
+    else:
+        # Non-fatal: some Serverless builds may not expose the skills API yet. The agent
+        # still works; the skill can be created/attached later in the Kibana UI.
+        print(f"⚠ Skill create skipped ({status}): {resp.get('error', resp)}")
+
+    # 3. Create the multi-hop agent wired to the tool (+ skill via skill_ids)
+    agent_body = AGENT_BODY if skill_ok else _without_skill(AGENT_BODY)
+    status, resp = _req("POST", "/api/agent_builder/agents", agent_body)
+    if status != 200 and skill_ok:
+        # If skill_ids was the problem, retry once without it so the agent still lands.
+        print(f"⚠ Agent create with skill_ids failed ({status}); retrying without it...")
+        status, resp = _req("POST", "/api/agent_builder/agents", _without_skill(AGENT_BODY))
     if status != 200:
         sys.exit(f"✗ Agent create failed ({status}): {resp.get('error', resp)}")
     print(f"✓ Agent created: {AGENT_ID}")
 
-    # 3. Smoke-test the tool returns hybrid results
+    # 4. Smoke-test the tool returns hybrid results
     status, resp = _req(
         "POST",
         "/api/agent_builder/tools/_execute",

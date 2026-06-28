@@ -19,6 +19,14 @@ GET aiewf-workshop-docs/_mapping
 
 ## Snippet 2 — GET Inference Endpoint Config (EIS is real infrastructure)
 
+**2a — Discovery: list only the embedding endpoints.** Scopes to `text_embedding` so you don't have to scan past rerankers and LLMs. (Tip for attendees: Cmd/Ctrl-F `jina` in the output pane to jump to it.)
+
+```
+GET _inference/text_embedding/_all
+```
+
+**2b — Fetch the specific endpoint config** once you've spotted it by name:
+
 ```
 GET _inference/text_embedding/.jina-embeddings-v5-text-small
 ```

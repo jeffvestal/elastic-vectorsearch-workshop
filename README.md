@@ -112,7 +112,7 @@ Work through this at least 72h before the event. All items are blocking unless m
 - [ ] **Pre-run Cell 6 (bad context)** — same question, deliberately off-topic context (ILM/snapshots/pipelines); verify the model answers "I don't have enough information"
 - [ ] **Pre-run Cell 7 (full pipeline)** — verify end-to-end retrieve → synthesize works live (uncached)
 - [ ] **Verify Lab 3 heatmap renders** — confirm matplotlib is installed in the sandbox boot and the MRR weight-sweep cell prints sane numbers (BM25 ~0.675, Semantic ~0.875, RRF 1.000; best linear around sem 0.6–0.7)
-- [ ] **Verify Lab 4 Part 3 (Agent Builder)** — run `agent-builder/setup_agent.py` and confirm HTTP 200 for both tool and agent creation; run the converse cell on the two-part question and confirm ≥2 tool calls appear in the output. Note: Agent Builder and Workflows must be enabled on the Serverless project (verified on the vector-optimized project).
+- [ ] **Verify Lab 4 Part 3 (Agent Builder)** — run `agent-builder/setup_agent.py` and confirm the tool, **skill** (Diagnose & Fix), and agent all report created (the skill step is non-fatal — a `⚠` means that build lacks the skills API, attach it in the UI instead); run the converse cell on the two-part question and confirm ≥2 tool calls appear in the output. Note: Agent Builder and Workflows must be enabled on the Serverless project (verified on the vector-optimized project).
 
 ### Pacing
 
@@ -158,7 +158,7 @@ workshops/aiewf-2026/
 │       ├── assignment.md            ← Lab 4 attendee instructions (incl. Part 3: Agent Builder)
 │       └── lab4.ipynb               ← legacy/unused copy (sandbox serves notebooks/lab4-rag-pipeline.ipynb)
 ├── agent-builder/
-│   └── setup_agent.py               ← idempotent: creates the Lab 4 Agent Builder tool + multi-hop agent
+│   └── setup_agent.py               ← idempotent: creates the Lab 4 Agent Builder tool + Diagnose & Fix skill + multi-hop agent
 └── notebooks/                       ← repo-runnable copies of all 4 labs (the SERVED Lab 4 is here)
     ├── lab1-vector-search.ipynb
     ├── lab2-where-vector-breaks.ipynb
@@ -207,7 +207,7 @@ workshops/aiewf-2026/
 - After Cell 6: "The model didn't get dumber. The retrieval got worse." — this is the closing line.
 - Cell 7: if time allows, take a question from the audience and run it live through the full pipeline
 - The security section is now two parts: an app `bool.filter` is **not** access control (say so explicitly); RBAC/DLS enforce on the credential's role. The DLS code is shown but not run — the sandbox's managed API key can't mint a restricted child key.
-- Part 3 (closer): attendees build the same multi-hop agent in Agent Builder — the Lab 3 RRF retriever registered as an ES|QL tool, wired to an agent, run via the converse API, then driven in the Kibana UI. Teaching beat: "same retriever, three abstraction levels — the agent framework is swappable, retrieval quality is not."
+- Part 3 (closer): attendees build the same multi-hop agent in Agent Builder — the Lab 3 RRF retriever registered as an ES|QL tool, a Diagnose & Fix skill, wired to an agent, run via the converse API, then they tour the agent (Tool / Skills / Custom instructions) and drive it in the Kibana UI. Teaching beat: "same retriever, three abstraction levels — the agent framework is swappable, retrieval quality is not."
 
 ---
 

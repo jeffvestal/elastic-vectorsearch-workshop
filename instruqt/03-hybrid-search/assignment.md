@@ -140,6 +140,18 @@ GET aiewf-workshop-docs/_search
 
 RRF ignores raw scores. Linear combination uses them — but first normalizes them to the same 0–1 scale using MinMax so scores from different algorithms can be added.
 
+> [!NOTE]
+> **What MinMax actually does — with vs without.** A linear retriever combines each sub-retriever's scores into one number. The question is *whose scores* dominate that sum.
+>
+> - **Without MinMax:** raw scores are combined as-is. The retriever that happens to produce **larger numbers dominates** the final ranking, your weights are hard to interpret, and results get biased by score *scale* rather than actual relevance.
+> - **With MinMax:** each retriever's scores are first rescaled to the same **0–1 range**, so weights behave predictably and the combination is balanced by *relative result quality*, not raw magnitude.
+>
+> **Quick example.** Retriever A scores 0–100; retriever B scores 0–1.
+> - *Without MinMax:* A almost always wins — purely because its numbers are bigger.
+> - *With MinMax:* A and B are put on the same scale and can contribute fairly.
+>
+> That's exactly our situation: **BM25 scores run ~0–20, semantic scores run ~0–1.** Without normalization BM25 would dominate every sum. `normalizer: minmax` levels the field so a `0.5/0.5` weight truly means 50/50.
+
 **Step 1 — Baseline: equal weights on the paraphrase query**
 
 Copy this into the Dev Console:
@@ -189,7 +201,7 @@ GET aiewf-workshop-docs/_search
 
 > **What you should see:** at equal `0.5/0.5` weights a lexical `distractor` doc can edge out the Watcher doc (`doc-049`) at #1 — equal weighting lets BM25's noise compete with semantic's correct signal. Now bump the **semantic** weight to `0.7` and BM25 down to `0.3` and re-run: `doc-049` moves to #1.
 >
-> **Why the normalizer matters:** BM25 scores run ~0–20; semantic scores run ~0–1. Without normalization BM25 would dominate the sum. `normalizer: minmax` rescales each retriever to 0–1 before applying weights, so `0.5/0.5` truly means 50/50. Unlike RRF, linear weighs score *magnitude*, not just rank — which is why the weight you choose changes the winner.
+> **Why the normalizer matters:** see the With/Without MinMax explainer at the top of Part B — `normalizer: minmax` is what makes `0.5/0.5` truly mean 50/50 here. And unlike RRF, linear weighs score *magnitude*, not just rank, which is why the weight you choose changes the winner.
 
 **Step 2 — A query where leaning the "obvious" way *backfires***
 

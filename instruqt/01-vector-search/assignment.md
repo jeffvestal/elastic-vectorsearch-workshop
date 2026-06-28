@@ -63,10 +63,21 @@ In the response, look for the `body_semantic` field. You'll see:
 ## Step 2 — Inspect the inference endpoint
 
 ```
-GET _inference
+GET _inference/text_embedding/_all
 ```
 
-Look for the Jina v5 endpoint in the response. Notice `"service": "elastic"` — this is the Elastic Inference Service (EIS), running inside your Elasticsearch cluster. There's no external API call, no API key to manage for embeddings.
+This returns **only the embedding endpoints** — not the rerankers or LLMs your project also ships with — so it's a much shorter list to scan.
+
+> [!TIP]
+> **Finding it in the output:** click into the response pane on the right, press **Cmd-F** (Mac) or **Ctrl-F** (Windows/Linux), and type `jina`. That jumps you straight to the `.jina-embeddings-v5-text-small` endpoint.
+
+Notice `"service": "elastic"` — this is the Elastic Inference Service (EIS), running inside your Elasticsearch cluster. There's no external API call, no API key to manage for embeddings.
+
+Want the full config for just that one endpoint (model id, dimensions, chunking settings)? Fetch it by name:
+
+```
+GET _inference/text_embedding/.jina-embeddings-v5-text-small
+```
 
 **Why this matters:** EIS means embeddings are co-located with search. Your query text stays inside the cluster.
 

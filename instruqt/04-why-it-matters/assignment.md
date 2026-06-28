@@ -162,17 +162,20 @@ A minimal agent loop that decides whether to run a follow-up query. Two parts of
 Part 3 — The same agent in Agent Builder
 ========================================
 
-You just hand-rolled the agent loop. Now build the same multi-hop behavior in **Elastic Agent Builder**, where the platform runs the loop for you — you only supply a **tool** and a **system prompt**.
+You just hand-rolled the agent loop. Now build the same multi-hop behavior in **Elastic Agent Builder**, where the platform runs the loop for you — you supply a **tool**, a **skill**, and a **system prompt**.
 
 **In the notebook (Part 3 cells):**
-- A cell registers the **hybrid-retrieval tool** — your Lab 3 RRF retriever, expressed as one ES|QL `FORK … FUSE` statement — and a **multi-hop agent** wired to it, both via the Kibana Agent Builder API. (In the sandbox these are pre-created at startup; the cell is idempotent, so re-running it is safe.)
+- A cell registers three things via the Kibana Agent Builder API: the **hybrid-retrieval tool** (your Lab 3 RRF retriever, expressed as one ES|QL `FORK … FUSE` statement), a **Diagnose & Fix skill** (a reusable "symptom → cause → fix" playbook), and a **multi-hop agent** wired to both. (In the sandbox these are pre-created at startup; the cell is idempotent, so re-running it is safe.)
 - A cell calls the agent through the `converse` API and prints its **tool calls** — on a two-part question you'll see it search, read, and search **again** before answering. No loop code on your side.
 
-**Then run it yourself in Kibana:**
-1. Switch to the [button label="Agent Builder"](tab-2) tab.
-2. Select **Workshop Docs Agent**.
-3. Ask a two-part question, e.g. *"My cluster is yellow with unassigned shards — what causes it and how do I use the allocation explain API to fix it?"*
-4. Each **🔧 tool call** in the conversation is a hybrid-retrieval hop. Click one to inspect the ES|QL it ran and the docs it got back — that's your Lab 3 retriever, executing inside the agent.
+> **Why create these in code instead of clicking?** You *can* build the tool, skill, and agent entirely in the Agent Builder UI — and you'll go look at them there next. We create them **programmatically** because it's idempotent, re-runnable from the repo, and shows the *exact* ES|QL and prompt behind each piece. Code first, then tour the result in the UI.
+
+**Then go see it — and drive it — in Kibana:**
+1. Switch to the [button label="Agent Builder"](tab-2) tab → **Agents** → **Workshop Docs Agent** → **Overview**. (Or open `…/app/agent_builder/agents/workshop-docs-agent` directly — the tab is the reliable path in the sandbox.)
+2. **Capabilities → Tool (1):** open `search-workshop-docs-hybrid` → **Edit in library** to see the `FORK … FUSE` ES|QL — your Lab 3 retriever, now a tool.
+3. **Capabilities → Skills:** open **Diagnose & Fix** — the playbook specializing the agent. *If it isn't there* (the notebook's skill step printed `⚠` for your build), add it via **Capabilities → Skills → Add skill → Diagnose & Fix**.
+4. **Customizations → Custom instructions:** the multi-hop system prompt. **Edit agent settings** is where you'd change any of this by hand. **Tool + Skill + instructions = the whole agent.**
+5. Now ask a two-part question, e.g. *"My cluster is yellow with unassigned shards — what causes it and how do I use the allocation explain API to fix it?"* Each **🔧 tool call** is a hybrid-retrieval hop — click one to inspect the ES|QL it ran and the docs it got back.
 
 > **The point of seeing both:** the hand-rolled loop and the Agent Builder agent use the *identical* retriever. The agent framework is the easy part to swap; retrieval quality — what you measured in Labs 2 and 3 — is what determines whether any of it works.
 
