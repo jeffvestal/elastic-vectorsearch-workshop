@@ -1,11 +1,12 @@
 ---
 slug: reranking
+id: ynspkvguehjb
 type: challenge
 title: 'Lab 5 (Bonus) — Reranking: Precision After Recall'
 teaser: 'Add the precision stage: rerank your hybrid results with Jina v2/v3 via EIS.
   Learn pointwise vs listwise rerankers and when to use which.'
 tabs:
-- id: iablsb9va2fr
+- id: rzmdb5nxb7yc
   title: Elastic Cloud Serverless
   type: service
   hostname: kubernetes-vm
@@ -21,7 +22,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: mq45yklibpxy
+- id: jszqsbhjmslh
   title: Python Notebook
   type: service
   hostname: kubernetes-vm

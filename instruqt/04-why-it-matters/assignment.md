@@ -29,7 +29,7 @@ tabs:
   hostname: kubernetes-vm
   path: /notebooks/lab4-rag-pipeline.ipynb
   port: 8888
-- id: ab9whyittmat
+- id: 4dbl8hag1lhq
   title: Agent Builder
   type: service
   hostname: kubernetes-vm
