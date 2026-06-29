@@ -72,9 +72,6 @@ def compare(query, size=5):
 print("✓ Helpers loaded")
 ```
 
-    ✓ Helpers loaded
-
-
 
 ```python
 # Confirm connection
@@ -82,9 +79,6 @@ info = es.info()
 count = es.count(index=INDEX)["count"]
 print(f"Connected to ES {info['version']['number']} | {count} docs in '{INDEX}'")
 ```
-
-    Connected to ES 9.5.0 | 62 docs in 'aiewf-workshop-docs'
-
 
 ## Failure mode 1: Exact identifiers — vector blurs the one token that matters
 
@@ -101,23 +95,6 @@ Our corpus has a JVM doc (`doc-007`) covering **OOMKilled / exit code 137** — 
 ```python
 compare("exit code 137")
 ```
-
-    QUERY: 'exit code 137'
-    
-    SEMANTIC (vector):
-      #1   0.6798  doc-007  JVM settings for Elasticsearch  JVM heap sizing, garbage collection, and the OOMKilled exit code 137 on Elasticsearch nodes.
-      #2   0.6784  doc-061  Container exit codes when a process is killed (OOM and signals)  What container exit codes mean when a process is killed by a signal or the out-of-memory killer.
-      #3   0.6535  doc-025  Troubleshoot snapshot and restore in Elasticsearch  Troubleshooting snapshot and restore failures, including repository access issues.
-      #4   0.6411  doc-062  Troubleshooting application crashes and restarts  Investigating application crash loops, unexpected restarts, and abnormal process termination.
-      #5   0.6297  doc-021  Red or yellow cluster health status troubleshooting  Diagnosing red or yellow cluster health and finding why shards are unassigned.
-    
-    BM25 (lexical):
-      #1   8.3688  doc-007  JVM settings for Elasticsearch  JVM heap sizing, garbage collection, and the OOMKilled exit code 137 on Elasticsearch nodes.
-      #2   6.1208  doc-061  Container exit codes when a process is killed (OOM and signals)  What container exit codes mean when a process is killed by a signal or the out-of-memory killer.
-      #3   2.5324  doc-062  Troubleshooting application crashes and restarts  Investigating application crash loops, unexpected restarts, and abnormal process termination.
-      #4   2.1718  doc-045  Elasticsearch aliases  Index aliases: secondary names that let you swap backing indices without app changes.
-      #5   2.0542  doc-013  Hybrid search in Elasticsearch  Combining BM25 lexical search with vector search to get the strengths of both.
-
 
 ## What actually happened — semantic *blurs*, it doesn't cleanly miss
 
@@ -143,19 +120,6 @@ Now compare BM25: `doc-007` wins by a **wide margin** (≈8 vs ≈6 and a cliff 
 compare("new_primaries")
 ```
 
-    QUERY: 'new_primaries'
-    
-    SEMANTIC (vector):
-      #1   0.6227  doc-021  Red or yellow cluster health status troubleshooting  Diagnosing red or yellow cluster health and finding why shards are unassigned.
-      #2   0.5925  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
-      #3   0.5900  doc-047  Elasticsearch index templates  Composable index templates that auto-apply settings, mappings, and aliases to new indices.
-      #4   0.5812  doc-045  Elasticsearch aliases  Index aliases: secondary names that let you swap backing indices without app changes.
-      #5   0.5786  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
-    
-    BM25 (lexical):
-      #1   2.4445  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
-
-
 
 ```python
 # Honesty check: semantic is NOT always wrong on identifiers.
@@ -163,21 +127,6 @@ compare("new_primaries")
 # Here semantic ranks doc-008 #1 — it nails the exact config key. Don't overclaim the failure mode.
 compare("cluster.routing.allocation.enable")
 ```
-
-    QUERY: 'cluster.routing.allocation.enable'
-    
-    SEMANTIC (vector):
-      #1   0.7923  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
-      #2   0.7783  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
-      #3   0.7720  doc-021  Red or yellow cluster health status troubleshooting  Diagnosing red or yellow cluster health and finding why shards are unassigned.
-      #4   0.7367  doc-041  Elasticsearch data tiers  Data tiers (hot/warm/cold/frozen) that balance search speed against storage cost over time.
-      #5   0.7163  doc-032  Elasticsearch cross-cluster search  Cross-cluster search for running federated queries across remote clusters.
-    
-    BM25 (lexical):
-      #1   2.7237  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
-      #2   2.6092  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
-      #3   2.6092  doc-021  Red or yellow cluster health status troubleshooting  Diagnosing red or yellow cluster health and finding why shards are unassigned.
-
 
 ## Reading those two results together
 
@@ -246,42 +195,6 @@ print("\nNote the boost column: title terms carry boost 6.6 (= 2.2 default × th
 print("body terms only 2.2. That 3× on the title is what lets doc-006's common-word title win.")
 ```
 
-    QUERY: '8.18 breaking changes'
-    
-    SEMANTIC (vector):
-      #1   0.7718  doc-057  Elasticsearch 8.18 release notes  Elasticsearch 8.18 release notes and the recommended upgrade path to 9.0.
-      #2   0.7041  doc-056  Elasticsearch 9.x what's new overview  Overview of what's new and what breaks in the Elasticsearch 9.x series.
-      #3   0.6910  doc-058  Elasticsearch 8.15 release notes  Elasticsearch 8.15 release notes covering semantic_text and vector-storage foundations.
-      #4   0.6810  doc-006  Elasticsearch breaking changes  Breaking changes across Elasticsearch releases to review before upgrading a cluster.
-      #5   0.6388  doc-042  Elasticsearch circuit breaker settings  Circuit breaker settings that fail requests before they exhaust JVM heap.
-    
-    BM25 (lexical):
-      #1   12.9117  doc-006  Elasticsearch breaking changes  Breaking changes across Elasticsearch releases to review before upgrading a cluster.
-      #2   7.3594  doc-057  Elasticsearch 8.18 release notes  Elasticsearch 8.18 release notes and the recommended upgrade path to 9.0.
-      #3   4.1848  doc-056  Elasticsearch 9.x what's new overview  Overview of what's new and what breaks in the Elasticsearch 9.x series.
-      #4   4.1145  doc-058  Elasticsearch 8.15 release notes  Elasticsearch 8.15 release notes covering semantic_text and vector-storage foundations.
-      #5   1.8681  doc-054  Elasticsearch enrich policies  Enrich policies that append data from other indices to documents during ingest.
-    
-    ================================================================
-    BM25 explain — why doc-006 outranks doc-057
-    ================================================================
-    
-    doc-006  score=12.912  (Elasticsearch breaking changes)
-        title:breaking in 7     6.456  =  boost 6.6 × idf 1.90 × tf 0.52
-        title:changes in 7      6.456  =  boost 6.6 × idf 1.90 × tf 0.52
-        body:breaking in 7      2.283  =  boost 2.2 × idf 1.39 × tf 0.75
-        body:changes in 7       2.283  =  boost 2.2 × idf 1.39 × tf 0.75
-    
-    doc-057  score=7.359  (Elasticsearch 8.18 release notes)
-        title:8.18 in 4         5.817  =  boost 6.6 × idf 1.90 × tf 0.46
-        body:8.18 in 4          3.844  =  boost 2.2 × idf 1.90 × tf 0.92
-        body:breaking in 4      1.502  =  boost 2.2 × idf 1.39 × tf 0.49
-        body:changes in 4       2.013  =  boost 2.2 × idf 1.39 × tf 0.66
-    
-    Note the boost column: title terms carry boost 6.6 (= 2.2 default × the title^3 boost),
-    body terms only 2.2. That 3× on the title is what lets doc-006's common-word title win.
-
-
 ## Why BM25 got it wrong — and it's *not* "term frequency"
 
 The `explain` output shows the real mechanism, and it's worth being precise about because it's easy to mislabel:
@@ -314,40 +227,6 @@ compare("notify me when something goes wrong")
 print("\n" + "="*60)
 compare("reduce storage cost for old logs")  # target: doc-041 (data tiers) — semantic #1, BM25 buried
 ```
-
-    QUERY: 'notify me when something goes wrong'
-    
-    SEMANTIC (vector):
-      #1   0.7497  doc-049  Elasticsearch Watcher alerting  Watcher, Elasticsearch's built-in alerting system: triggers, conditions, and actions that fire on data thresholds.
-      #2   0.6522  doc-025  Troubleshoot snapshot and restore in Elasticsearch  Troubleshooting snapshot and restore failures, including repository access issues.
-      #3   0.6435  doc-042  Elasticsearch circuit breaker settings  Circuit breaker settings that fail requests before they exhaust JVM heap.
-      #4   0.6380  doc-062  Troubleshooting application crashes and restarts  Investigating application crash loops, unexpected restarts, and abnormal process termination.
-      #5   0.6376  doc-019  Ingest pipelines in Elasticsearch  Building ingest pipelines from processors to transform and enrich documents before indexing.
-    
-    BM25 (lexical):
-      #1   4.4524  doc-061  Container exit codes when a process is killed (OOM and signals)  What container exit codes mean when a process is killed by a signal or the out-of-memory killer.
-      #2   3.0165  doc-002  Troubleshoot authorization errors and role mapping  Diagnosing authorization exceptions and role-mapping problems for authenticated users.
-      #3   2.8812  doc-022  Data streams in Elasticsearch  Data streams: an abstraction over backing indices optimized for append-only time-series data.
-      #4   1.5047  doc-056  Elasticsearch 9.x what's new overview  Overview of what's new and what breaks in the Elasticsearch 9.x series.
-      #5   0.9664  doc-049  Elasticsearch Watcher alerting  Watcher, Elasticsearch's built-in alerting system: triggers, conditions, and actions that fire on data thresholds.
-    
-    ============================================================
-    QUERY: 'reduce storage cost for old logs'
-    
-    SEMANTIC (vector):
-      #1   0.7369  doc-041  Elasticsearch data tiers  Data tiers (hot/warm/cold/frozen) that balance search speed against storage cost over time.
-      #2   0.7099  doc-017  Index lifecycle management overview  How Index Lifecycle Management moves indices through hot/warm/cold/frozen/delete phases.
-      #3   0.7082  doc-037  Elasticsearch snapshot and restore overview  Snapshots as point-in-time backups of a cluster stored in a repository.
-      #4   0.7037  doc-007  JVM settings for Elasticsearch  JVM heap sizing, garbage collection, and the OOMKilled exit code 137 on Elasticsearch nodes.
-      #5   0.7005  doc-022  Data streams in Elasticsearch  Data streams: an abstraction over backing indices optimized for append-only time-series data.
-    
-    BM25 (lexical):
-      #1   7.4604  doc-007  JVM settings for Elasticsearch  JVM heap sizing, garbage collection, and the OOMKilled exit code 137 on Elasticsearch nodes.
-      #2   6.1529  doc-053  Elasticsearch vector storage optimization  Reducing dense-vector memory use while keeping acceptable search recall.
-      #3   4.7302  doc-010  TLS encryption for cluster communications  Securing node-to-node cluster communication with TLS certificates.
-      #4   3.8664  doc-011  Dense vector field type  The dense_vector field type for storing float vectors and running kNN similarity search.
-      #5   3.7858  doc-041  Elasticsearch data tiers  Data tiers (hot/warm/cold/frozen) that balance search speed against storage cost over time.
-
 
 ## Why BM25 buries the alerting doc
 
@@ -423,21 +302,6 @@ print("the rarest, most discriminating token. That single high-idf match is the 
 print("vector search couldn't replicate: to the embedding model '137' is just part of the")
 print("'a process was killed' concept, not a special token worth ranking on.")
 ```
-
-    Doc: doc-007 — JVM settings for Elasticsearch
-    Score: 8.3688
-    
-    Per-term contributions (watch the idf column — the rare token '137' dominates):
-    
-        body:exit in 17       2.555  =  boost 2.2 × idf 1.86 × tf 0.63
-        body:code in 17       2.555  =  boost 2.2 × idf 1.86 × tf 0.63
-        body:137 in 17        3.258  =  boost 2.2 × idf 2.37 × tf 0.63
-    
-    '137' carries the highest idf of the three — it appears in only one doc, so it's
-    the rarest, most discriminating token. That single high-idf match is the signal
-    vector search couldn't replicate: to the embedding model '137' is just part of the
-    'a process was killed' concept, not a special token worth ranking on.
-
 
 ## The semantic score is different in nature
 

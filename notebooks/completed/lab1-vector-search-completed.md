@@ -13,6 +13,25 @@ This notebook reads credentials from environment variables:
 - **In Instruqt:** `ES_ENDPOINT` and `ES_API_KEY` are pre-configured — just run the cells.  
 - **Re-running from the repo:** `export ES_ENDPOINT=https://...` and `export ES_API_KEY=...`
 
+## New to vectors? Start here (2-minute primer)
+
+If this is your first time with semantic search, here's the whole idea before we touch any code.
+
+**An embedding is text turned into a list of numbers that captures *meaning*.** The model reads a piece of text and outputs a vector — a few hundred numbers — positioned so that text about *similar things* lands close together, and text about *different things* lands far apart. No math required on your end; the model does it.
+
+**That's what makes semantic search different from keyword search.** Keyword search (BM25) matches the *words* you typed. Semantic search matches the *meaning*. So a query like **"securing cluster traffic"** can find a document about **"TLS encryption"** — even though they share no words — because both vectors land in the same neighborhood. (Keyword search would miss it entirely: no shared words.)
+
+**`semantic_text` is the field type that does all of this for you.** When you map a field as `semantic_text`, Elasticsearch automatically calls the embedding model — at *index time* for every document, and again at *query time* for every search. You write **zero embedding code**: no model to host, no vectors to manage, no pipeline to build.
+
+**What the cells below show you, in order:**
+1. Connect and confirm the corpus is indexed.
+2. Look at the `semantic_text` field mapping — see where the model is wired in.
+3. Inspect the embedding endpoint (the model's config).
+4. Run your first semantic query and watch "securing cluster traffic" find the TLS doc.
+5. Peek inside a stored document to see how it was chunked and vectorized.
+
+Run each cell top to bottom — you don't need to write anything, just execute and read the output.
+
 
 ```python
 # --- Workshop helpers ---
@@ -283,9 +302,9 @@ print(f"  {top.get('body','')[:300]}...")
     
       #1   0.7639  doc-010  TLS encryption for cluster communications  Securing node-to-node cluster communication with TLS certificates.
       #2   0.7261  doc-009  Set up security in self-managed Elasticsearch deployments  How self-managed Elasticsearch auto-configures security and how to set it up manually.
-      #3   0.7103  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
+      #3   0.7100  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
       #4   0.7044  doc-032  Elasticsearch cross-cluster search  Cross-cluster search for running federated queries across remote clusters.
-      #5   0.6971  doc-038  Elasticsearch security overview  Overview of Elasticsearch security: authentication, authorization, and encryption.
+      #5   0.6973  doc-038  Elasticsearch security overview  Overview of Elasticsearch security: authentication, authorization, and encryption.
     
     Top hit body preview:
       ...
@@ -338,19 +357,19 @@ for q in wow_queries:
     ============================================================
     QUERY: 'how do I back up my cluster data'
       #1   0.7600  doc-037  Elasticsearch snapshot and restore overview  Snapshots as point-in-time backups of a cluster stored in a repository.
-      #2   0.7497  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
+      #2   0.7500  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
       #3   0.7485  doc-021  Red or yellow cluster health status troubleshooting  Diagnosing red or yellow cluster health and finding why shards are unassigned.
       #4   0.7413  doc-025  Troubleshoot snapshot and restore in Elasticsearch  Troubleshooting snapshot and restore failures, including repository access issues.
-      #5   0.7406  doc-041  Elasticsearch data tiers  Data tiers (hot/warm/cold/frozen) that balance search speed against storage cost over time.
+      #5   0.7405  doc-041  Elasticsearch data tiers  Data tiers (hot/warm/cold/frozen) that balance search speed against storage cost over time.
       → top hit: Elasticsearch snapshot and restore overview
     
     ============================================================
     QUERY: "users can't connect to Kibana"
       #1   0.8230  doc-024  Authentication in Kibana  Configuring authentication mechanisms for logging in to Kibana.
       #2   0.8037  doc-001  SAML authentication troubleshooting  Troubleshooting SAML authentication failures, realm errors, and login problems in Elasticsearch.
-      #3   0.7968  doc-003  Diagnose password setup and connection failures  Fixing password setup and SSL/TLS connection errors such as PKIX path building failures.
-      #4   0.7795  doc-052  Elasticsearch Kibana Discover and dashboards  Kibana Discover for interactively searching, filtering, and exploring document data.
-      #5   0.7706  doc-010  TLS encryption for cluster communications  Securing node-to-node cluster communication with TLS certificates.
+      #3   0.7970  doc-003  Diagnose password setup and connection failures  Fixing password setup and SSL/TLS connection errors such as PKIX path building failures.
+      #4   0.7794  doc-052  Elasticsearch Kibana Discover and dashboards  Kibana Discover for interactively searching, filtering, and exploring document data.
+      #5   0.7704  doc-010  TLS encryption for cluster communications  Securing node-to-node cluster communication with TLS certificates.
       → top hit: Authentication in Kibana
 
 

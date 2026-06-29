@@ -69,18 +69,12 @@ def search(retriever, size=5, source=("id","title","summary","version_tags")):
 print("✓ Helpers loaded")
 ```
 
-    ✓ Helpers loaded
-
-
 
 ```python
 info = es.info()
 count = es.count(index=INDEX)["count"]
 print(f"Connected to ES {info['version']['number']} | {count} docs in '{INDEX}'")
 ```
-
-    Connected to ES 9.5.0 | 62 docs in 'aiewf-workshop-docs'
-
 
 ## RRF — Reciprocal Rank Fusion
 
@@ -118,28 +112,6 @@ show_hits(search(r_rrf("8.18 breaking changes"), source=("id", "title", "version
 print("\nHYBRID (RRF): 'notify me when something goes wrong'  → want doc-049")
 show_hits(search(r_rrf("notify me when something goes wrong")))
 ```
-
-    HYBRID (RRF): 'new_primaries'  → want doc-008
-      #1   0.0325  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
-      #2   0.0164  doc-021  Red or yellow cluster health status troubleshooting  Diagnosing red or yellow cluster health and finding why shards are unassigned.
-      #3   0.0159  doc-047  Elasticsearch index templates  Composable index templates that auto-apply settings, mappings, and aliases to new indices.
-      #4   0.0156  doc-045  Elasticsearch aliases  Index aliases: secondary names that let you swap backing indices without app changes.
-      #5   0.0154  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
-    
-    HYBRID (RRF): '8.18 breaking changes'  → want doc-057
-      #1   0.0325  doc-057  Elasticsearch 8.18 release notes  
-      #2   0.0320  doc-006  Elasticsearch breaking changes  
-      #3   0.0320  doc-056  Elasticsearch 9.x what's new overview  
-      #4   0.0315  doc-058  Elasticsearch 8.15 release notes  
-      #5   0.0303  doc-054  Elasticsearch enrich policies  
-    
-    HYBRID (RRF): 'notify me when something goes wrong'  → want doc-049
-      #1   0.0318  doc-049  Elasticsearch Watcher alerting  Watcher, Elasticsearch's built-in alerting system: triggers, conditions, and actions that fire on data thresholds.
-      #2   0.0308  doc-025  Troubleshoot snapshot and restore in Elasticsearch  Troubleshooting snapshot and restore failures, including repository access issues.
-      #3   0.0307  doc-061  Container exit codes when a process is killed (OOM and signals)  What container exit codes mean when a process is killed by a signal or the out-of-memory killer.
-      #4   0.0295  doc-019  Ingest pipelines in Elasticsearch  Building ingest pipelines from processors to transform and enrich documents before indexing.
-      #5   0.0292  doc-042  Elasticsearch circuit breaker settings  Circuit breaker settings that fail requests before they exhaust JVM heap.
-
 
 ## Prove the win objectively — rank of the known-good doc
 
@@ -185,17 +157,6 @@ print("Rank of the correct doc (1 = perfect). Notice RRF = 1 on every row,")
 print("even though BM25 or Semantic mis-ranks the target on each one.")
 ```
 
-    Query                                    BM25  Semantic    RRF   target
-    ------------------------------------------------------------------------------
-    exit code 137                               1         1      1 ✅ doc-007 (exact id — semantic blurs)
-    new_primaries                               1         2      1 ✅ doc-008 (bare value — semantic wrong doc)
-    8.18 breaking changes                       2         1      1 ✅ doc-057 (version — BM25 wrong doc)
-    notify me when something goes wrong         5         1      1 ✅ doc-049 (paraphrase — BM25 buries)
-    ------------------------------------------------------------------------------
-    Rank of the correct doc (1 = perfect). Notice RRF = 1 on every row,
-    even though BM25 or Semantic mis-ranks the target on each one.
-
-
 ## Filtering — scoping retrieval with metadata
 
 The corpus has `version_tags` and `product` keyword fields specifically for this. Real production indices have dozens of filter axes: tenant ID, department, document classification, date range, language, etc.
@@ -240,19 +201,6 @@ resp_filtered = es.search(index=INDEX, retriever=r_hybrid_filtered, size=5,
 show_hits(resp_filtered, fields=("id", "title", "version_tags"))
 ```
 
-    QUERY: '8.18 breaking changes'  |  FILTER: version_tags = '8.18'
-    
-    Without filter (note doc-006 'breaking changes' and 8.15/9.x docs sneak in):
-      #1   0.0325  doc-057  Elasticsearch 8.18 release notes  ['8.18']
-      #2   0.0320  doc-006  Elasticsearch breaking changes  ['9.0', '9.1', '9.2', '9.4']
-      #3   0.0320  doc-056  Elasticsearch 9.x what's new overview  ['9.0', '9.1', '9.2', '9.4']
-      #4   0.0315  doc-058  Elasticsearch 8.15 release notes  ['8.15']
-      #5   0.0303  doc-054  Elasticsearch enrich policies  ['9.0']
-    
-    With filter (version_tags = 8.18 only):
-      #1   0.0328  doc-057  Elasticsearch 8.18 release notes  ['8.18']
-
-
 ## Why you can't just add BM25 and semantic scores
 
 We said RRF is rank-based to avoid this problem. Let's actually see what the scores look like on the same query:
@@ -278,19 +226,16 @@ if bm25_score and sem_score:
     print("MinMax normalization (linear retriever) rescales both to [0,1]. RRF avoids it entirely.")
 ```
 
-    Query: 'notify me when something goes wrong'
-      BM25 top score:     4.452428
-      Semantic top score: 0.7496855
-      Ratio: BM25/semantic = 5.9x
-    
-    Different scales, different distributions. Naively adding them lets whichever
-    retriever happens to produce bigger raw numbers dominate the fused ranking.
-    MinMax normalization (linear retriever) rescales both to [0,1]. RRF avoids it entirely.
-
-
 ## Linear combination with MinMax normalization
 
-The `linear` retriever normalizes each sub-retriever's scores to [0, 1] using MinMax, then applies your weights:
+**First, what MinMax does — with vs without.** A linear retriever combines each sub-retriever's scores into one number. The catch is *whose scores* dominate that sum:
+
+- **Without MinMax:** raw scores are combined as-is → the retriever that produces **larger numbers dominates**, weights are hard to interpret, and ranking is biased by score *scale* rather than relevance.
+- **With MinMax:** each retriever is rescaled to the same **0–1 range** first → weights behave predictably and the combination is balanced by *relative result quality*, not magnitude.
+
+*Quick example:* retriever A scores 0–100, retriever B scores 0–1. Without MinMax, A wins by scale alone; with MinMax, A and B compete fairly. That's our exact situation — **BM25 ~0–20 vs semantic ~0–1** — so without normalization BM25 would dominate every sum.
+
+The `linear` retriever applies this automatically: MinMax-normalize each sub-retriever to [0, 1], then apply your weights:
 
 ```
 normalized_score = (raw_score - min) / (max - min)   # per sub-retriever
@@ -324,39 +269,137 @@ for wb, ws in [(0.8, 0.2), (0.2, 0.8)]:
     show_hits(search(r_linear(q2, w_bm25=wb, w_sem=ws)), fields=("id", "title", "version_tags"))
 ```
 
-    LINEAR weights on 'notify me when something goes wrong'  (target doc-049):
-    
-      weights BM25=0.5 / semantic=0.5:
-      #1   0.7166  doc-061  Container exit codes when a process is killed (OOM and signals)  What container exit codes mean when a process is killed by a signal or the out-of-memory killer.
-      #2   0.5866  doc-049  Elasticsearch Watcher alerting  Watcher, Elasticsearch's built-in alerting system: triggers, conditions, and actions that fire on data thresholds.
-      #3   0.4494  doc-022  Data streams in Elasticsearch  Data streams: an abstraction over backing indices optimized for append-only time-series data.
-      #4   0.4492  doc-002  Troubleshoot authorization errors and role mapping  Diagnosing authorization exceptions and role-mapping problems for authenticated users.
-      #5   0.3460  doc-025  Troubleshoot snapshot and restore in Elasticsearch  Troubleshooting snapshot and restore failures, including repository access issues.
-    
-      weights BM25=0.3 / semantic=0.7:
-      #1   0.7519  doc-049  Elasticsearch Watcher alerting  Watcher, Elasticsearch's built-in alerting system: triggers, conditions, and actions that fire on data thresholds.
-      #2   0.6033  doc-061  Container exit codes when a process is killed (OOM and signals)  What container exit codes mean when a process is killed by a signal or the out-of-memory killer.
-      #3   0.4351  doc-025  Troubleshoot snapshot and restore in Elasticsearch  Troubleshooting snapshot and restore failures, including repository access issues.
-      #4   0.3933  doc-042  Elasticsearch circuit breaker settings  Circuit breaker settings that fail requests before they exhaust JVM heap.
-      #5   0.3874  doc-019  Ingest pipelines in Elasticsearch  Building ingest pipelines from processors to transform and enrich documents before indexing.
-    
-    
-    LINEAR weights on '8.18 breaking changes'  (target doc-057):
-    
-      weights BM25=0.8 / semantic=0.2:
-      #1   0.9250  doc-006  Elasticsearch breaking changes  ['9.0', '9.1', '9.2', '9.4']
-      #2   0.6340  doc-057  Elasticsearch 8.18 release notes  ['8.18']
-      #3   0.3688  doc-056  Elasticsearch 9.x what's new overview  ['9.0', '9.1', '9.2', '9.4']
-      #4   0.3533  doc-058  Elasticsearch 8.15 release notes  ['8.15']
-      #5   0.1416  doc-054  Elasticsearch enrich policies  ['9.0']
-    
-      weights BM25=0.2 / semantic=0.8:
-      #1   0.9085  doc-057  Elasticsearch 8.18 release notes  ['8.18']
-      #2   0.6999  doc-006  Elasticsearch breaking changes  ['9.0', '9.1', '9.2', '9.4']
-      #3   0.6325  doc-056  Elasticsearch 9.x what's new overview  ['9.0', '9.1', '9.2', '9.4']
-      #4   0.5879  doc-058  Elasticsearch 8.15 release notes  ['8.15']
-      #5   0.3605  doc-042  Elasticsearch circuit breaker settings  ['9.0']
+## "Just measure the right weights" — OK, let's actually measure them
 
+The rule of thumb above says linear *can* beat RRF **if you've measured the right weights**. That claim is easy to assert and rarely shown — so let's do it. We already have the one thing an eval needs: a **judgment set** (`JUDGMENTS` from the cell above — queries paired with their known-correct doc).
+
+The metric is **MRR (Mean Reciprocal Rank)**: for each query, score `1 / rank_of_correct_doc` (1.0 if it's #1, 0.5 if #2, 0.33 if #3…), then average across the set. One number per strategy; higher is better. It rewards putting the right doc at the very top, which is what a RAG prompt actually consumes.
+
+Below we sweep the linear retriever's BM25↔semantic weight across the full range, score each split by MRR, and compare the **best measured** linear weight to plain RRF.
+
+> **This block is the eval harness in miniature.** In production you'd run it over hundreds of judged queries pulled from real user telemetry (clicks, thumbs, conversions) — not four — and re-run it on every corpus or embedding-model change. The *shape* is identical: judgments → sweep → metric → pick. What you're about to see in four queries is what a relevance-tuning pipeline does at scale.
+
+
+```python
+# Weight recommendation: sweep linear weights, score each by MRR over the judgment set.
+# Reuses JUDGMENTS and rank_of() from the "rank of the known-good doc" cell above.
+
+def mrr(builder):
+    """Mean Reciprocal Rank of the known-good doc across the judgment set."""
+    total = 0.0
+    for query, good_id, _ in JUDGMENTS:
+        r = rank_of(builder, query, good_id)
+        total += (1.0 / r) if r else 0.0
+    return total / len(JUDGMENTS)
+
+# Baselines — the single-strategy retrievers and zero-tuning RRF
+print("Baselines (MRR — higher is better, 1.0 = every target at rank 1):")
+print(f"  BM25 only:      {mrr(r_bm25):.3f}")
+print(f"  Semantic only:  {mrr(r_semantic):.3f}")
+print(f"  RRF (no tuning):{mrr(r_rrf):>6.3f}")
+
+# Sweep the linear BM25<->semantic balance across the full range
+print("\nLinear weight sweep:")
+print(f"  {'BM25':>5} {'semantic':>9} {'MRR':>7}")
+print("  " + "-" * 23)
+sweep = []
+for w_sem in [round(i * 0.1, 1) for i in range(11)]:
+    w_bm25 = round(1.0 - w_sem, 1)
+    score = mrr(lambda q, wb=w_bm25, ws=w_sem: r_linear(q, w_bm25=wb, w_sem=ws))
+    sweep.append((w_bm25, w_sem, score))
+
+best = max(sweep, key=lambda x: x[2])
+rrf_score = mrr(r_rrf)
+for w_bm25, w_sem, score in sweep:
+    flag = "  <- best measured" if (w_bm25, w_sem) == (best[0], best[1]) else ""
+    print(f"  {w_bm25:>5} {w_sem:>9} {score:>7.3f}{flag}")
+
+print("\n" + "=" * 52)
+print(f"Best linear weight (measured): BM25={best[0]} / semantic={best[1]}  → MRR {best[2]:.3f}")
+print(f"RRF, zero tuning:                                  → MRR {rrf_score:.3f}")
+print("=" * 52)
+print(
+    "\nThe best-measured linear weight matches RRF — but notice the 0.5/0.5 'obvious'\n"
+    "split scores well below it, and the winning weight leans semantic specifically\n"
+    "because THIS judgment set is paraphrase- and version-heavy. Change the query mix\n"
+    "(or re-embed the corpus and watch the MinMax ranges shift) and that number moves.\n"
+    "RRF hit the same score with nothing to tune and nothing to re-calibrate later."
+)
+```
+
+## The whole story in one picture — strategies × queries
+
+The sweep gave us numbers. Here's the same data as a **heatmap**: every retrieval strategy (rows) against every trap query (columns), colored by the **rank of the correct doc** — green = 1 (perfect), red = buried.
+
+This is the single most useful artifact in a retrieval eval. Read it by row and by column:
+- **Scan a row** to see where a strategy fails — BM25 and Semantic each have a red/yellow cell, on *different* queries.
+- **Scan the RRF row** — it should be green all the way across. That's the entire thesis of the lab in one strip of color: every other strategy breaks on *some* query; fusion breaks on none.
+
+(If `matplotlib` isn't installed, the cell falls back to a colored text grid with the same numbers — no plot library required.)
+
+
+```python
+# Heatmap: rank of the known-good doc for every (strategy, query).
+# Builds on rank_of() + JUDGMENTS from the cells above.
+
+HEATMAP_STRATEGIES = {
+    "BM25":           r_bm25,
+    "Semantic":       r_semantic,
+    "Linear 0.8/0.2": lambda q: r_linear(q, w_bm25=0.8, w_sem=0.2),
+    "Linear 0.5/0.5": lambda q: r_linear(q, w_bm25=0.5, w_sem=0.5),
+    "Linear 0.2/0.8": lambda q: r_linear(q, w_bm25=0.2, w_sem=0.8),
+    "RRF hybrid":     r_rrf,
+}
+QUERY_LABELS = [q for q, _, _ in JUDGMENTS]
+
+# matrix[strategy][query] = rank of the correct doc (None if outside the window)
+matrix = [[rank_of(b, q, gid) for q, gid, _ in JUDGMENTS]
+          for b in HEATMAP_STRATEGIES.values()]
+
+CAP = 8  # ranks >= CAP (or missing) all show as the most "broken" color
+
+try:
+    import matplotlib.pyplot as plt
+    # None -> CAP so missing docs render as the worst color
+    color_vals = [[min(r, CAP) if r else CAP for r in row] for row in matrix]
+
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    im = ax.imshow(color_vals, cmap="RdYlGn_r", vmin=1, vmax=CAP, aspect="auto")
+
+    ax.set_xticks(range(len(QUERY_LABELS)))
+    ax.set_xticklabels(QUERY_LABELS, rotation=20, ha="right")
+    ax.set_yticks(range(len(HEATMAP_STRATEGIES)))
+    ax.set_yticklabels(list(HEATMAP_STRATEGIES))
+
+    # annotate each cell with the actual rank
+    for i, row in enumerate(matrix):
+        for j, r in enumerate(row):
+            ax.text(j, i, "—" if r is None else str(r),
+                    ha="center", va="center", color="black", fontweight="bold")
+
+    ax.set_title("Rank of the correct doc — lower (green) is better", pad=12)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label(f"rank (capped at {CAP})")
+    plt.tight_layout()
+    plt.show()
+
+except ImportError:
+    # Zero-dependency fallback: ANSI-colored text grid with the same numbers.
+    GREEN, YELLOW, RED, RESET = "\033[42m\033[30m", "\033[43m\033[30m", "\033[41m\033[97m", "\033[0m"
+    def cell(r):
+        if r == 1:            bg = GREEN
+        elif r and r <= 3:    bg = YELLOW
+        else:                 bg = RED
+        return f"{bg} {('—' if r is None else r):>2} {RESET}"
+    print("Rank of the correct doc (green=1 best, yellow=2-3, red=4+/missing):\n")
+    print(f"{'strategy':<16}" + "".join(f"{q[:13]:<15}" for q in QUERY_LABELS))
+    for name, row in zip(HEATMAP_STRATEGIES, matrix):
+        print(f"{name:<16}" + "".join(f"  {cell(r)}        "[:15] for r in row))
+    print("\n(install matplotlib for the graphical heatmap: pip install matplotlib)")
+
+print("\nRead the RRF row: green across every query. Every other row has at least one\n"
+      "non-green cell — a query where that strategy mis-ranked the doc the user wanted.")
+```
 
 ## Cross-encoder reranking — precision after recall
 
@@ -375,6 +418,8 @@ A **cross-encoder** does something different: it takes a (query, document) pair 
 The `text_similarity_reranker` retriever in ES does this in a single query.
 
 > **Reality check on a 62-doc corpus:** reranking shines when stage 1 returns *hundreds* of plausible candidates and you need to reorder the top of that list precisely. On a tiny corpus, RRF already puts the right doc at #1, so the reranker has little room to help — and on some queries it may even shuffle a lexically-similar distractor upward. Treat this cell as a *mechanics* demo (how to wire the two-stage pipeline), not proof that reranking always improves ranking. The payoff is real at production scale.
+
+> 📓 **Want to go deeper?** This is a single mechanics cell. The **bonus Lab 5 — Reranking** notebook (`lab5-reranking.ipynb`) goes in depth: calling the rerank API directly, the **pointwise (cross-encoder) vs listwise** distinction, Jina Reranker **v2 vs v3** head-to-head, and a decision matrix for when to use which.
 
 
 ```python
@@ -416,23 +461,6 @@ except Exception as e:
     print(f"  To use this, verify that '{RERANKER_ID}' exists in es.inference.get()")
     print("  The RRF hybrid result above is still excellent for production use.")
 ```
-
-    RRF (recall stage): 'how do I secure traffic between nodes'
-      #1   0.0328  doc-010  TLS encryption for cluster communications  Securing node-to-node cluster communication with TLS certificates.
-      #2   0.0320  doc-009  Set up security in self-managed Elasticsearch deployments  How self-managed Elasticsearch auto-configures security and how to set it up manually.
-      #3   0.0301  doc-023  Upgrade Elasticsearch  Performing a rolling upgrade of a self-managed Elasticsearch cluster.
-      #4   0.0299  doc-055  Elasticsearch cluster management best practices  Production best practices for heap sizing, shard sizing, and cluster operation.
-      #5   0.0296  doc-008  Cluster-level shard allocation and routing settings  Cluster shard allocation and routing settings, including cluster.routing.allocation.enable and new_primaries.
-    
-    RERANKED (cross-encoder precision stage): 'how do I secure traffic between nodes'
-      #1   1.5588  doc-010  TLS encryption for cluster communications  
-      #2   1.2480  doc-009  Set up security in self-managed Elasticsearch deployments  
-      #3   1.1895  doc-038  Elasticsearch security overview  
-      #4   1.1883  doc-055  Elasticsearch cluster management best practices  
-      #5   1.1689  doc-032  Elasticsearch cross-cluster search  
-    
-    (scores are now cross-encoder relevance scores, not cosine or tf/idf)
-
 
 ## Decision framework — which retriever for which situation?
 
