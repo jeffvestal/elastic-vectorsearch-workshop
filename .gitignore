@@ -1,0 +1,8 @@
+# Local credentials — never commit (this is a PUBLIC repo)
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
