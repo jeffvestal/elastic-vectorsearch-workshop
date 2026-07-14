@@ -1,0 +1,154 @@
+#!/bin/bash
+# Lab 1 setup (ES|QL track) — runs on kubernetes-vm
+# Derived from the retriever-DSL track's setup-kubernetes-vm. Differences (only):
+#   1. Copies the notebooks-esql/ notebooks instead of notebooks/.
+#   2. Creates a Kibana DATA VIEW for the index — REQUIRED so Labs 1-3 & 5 work in
+#      Discover (Discover only lists indices that have a data view; it never auto-creates one).
+#   3. Adds a non-fatal check that a `completion`-task inference endpoint exists (Lab 4 COMPLETION).
+#
+# Everything else (serverless provisioning, deps, corpus ingest, Agent Builder, Jupyter)
+# is identical to the DSL track. LLM calls (Lab 4) use the Elastic Inference Service —
+# ES_API_KEY authenticates both Elasticsearch and EIS. No separate Anthropic key.
+set -euo pipefail
+
+echo "=== Provisioning Elastic Serverless (vector-optimized) ==="
+/opt/workshops/start_serverless.sh \
+  --project-type elasticsearch \
+  --optimized-for vector
+
+# Extract credentials from the provisioning output
+ES_URL=$(jq -r '.["aws-us-east-1"].endpoints.elasticsearch' /tmp/project_results.json)
+ES_APIKEY=$(jq -r '.["aws-us-east-1"].credentials.api_key' /tmp/project_results.json)
+ES_KIBANA=$(jq -r '.["aws-us-east-1"].endpoints.kibana' /tmp/project_results.json)
+
+# Store for all challenges via Instruqt agent variables
+agent variable set ES_ENDPOINT "$ES_URL"
+agent variable set ES_API_KEY "$ES_APIKEY"
+agent variable set ES_KIBANA_URL "$ES_KIBANA"
+
+export ES_ENDPOINT="$ES_URL"
+export ES_API_KEY="$ES_APIKEY"
+export KIBANA_URL="$ES_KIBANA"
+
+echo "ES:     $ES_URL"
+echo "Kibana: $ES_KIBANA"
+echo "Kibana also proxied at http://localhost:30001 (NGINX)"
+
+echo "=== Installing Python dependencies ==="
+# matplotlib powers the Lab 3 retrieval-strategy heatmap (text-grid fallback if missing).
+pip install 'elasticsearch>=8.17,<9' jupyter requests matplotlib
+python3 -c "import elasticsearch; print('elasticsearch client:', elasticsearch.__version__)"
+
+echo "=== Cloning workshop repo ==="
+git clone --depth=1 https://github.com/jeffvestal/elastic-vectorsearch-workshop.git /root/workshop
+
+echo "=== Ingesting corpus ==="
+# Corpus + ingest.py are SHARED with the DSL track (same index aiewf-workshop-docs).
+cd /root/workshop/corpus
+python3 ingest.py 2>&1
+
+echo "=== Creating Kibana data view (REQUIRED for Discover) ==="
+# Discover's ES|QL mode only lists indices that have a data view, and it does NOT
+# auto-create one. Without this, Labs 1-3 & 5 open Discover to an empty screen.
+# No timeFieldName: the corpus has no time field, and setting one would impose a
+# date filter that hides every doc. Idempotent: a 409 (already exists) is fine.
+DV_HTTP=$(curl -s -o /tmp/dv_resp.json -w "%{http_code}" \
+  -X POST "$ES_KIBANA/api/data_views/data_view" \
+  -H "Authorization: ApiKey $ES_API_KEY" \
+  -H "kbn-xsrf: true" \
+  -H "Content-Type: application/json" \
+  -d '{"data_view": {"name": "aiewf-workshop-docs", "title": "aiewf-workshop-docs", "allowNoIndex": false}}' || true)
+if [ "$DV_HTTP" = "200" ] || [ "$DV_HTTP" = "201" ]; then
+  echo "Data view 'aiewf-workshop-docs' created."
+elif [ "$DV_HTTP" = "409" ]; then
+  echo "Data view already exists — OK."
+else
+  echo "WARNING: data view creation returned HTTP $DV_HTTP. Discover may show no data."
+  cat /tmp/dv_resp.json 2>/dev/null || true
+fi
+
+echo "=== Verifying a completion inference endpoint exists (Lab 4 COMPLETION) ==="
+# Non-fatal: Lab 4's COMPLETION command needs a `completion`-task endpoint
+# (.anthropic-claude-4.5-haiku-completion). chat_completion endpoints do NOT work with
+# ES|QL COMPLETION. If none is found, warn now — the failure would otherwise surface at Lab 4.
+python3 - <<'PYEOF' || echo "WARNING: completion-endpoint check failed to run (non-fatal)."
+import os
+from elasticsearch import Elasticsearch
+es = Elasticsearch(os.environ["ES_ENDPOINT"], api_key=os.environ["ES_API_KEY"], request_timeout=60)
+eps = es.inference.get().body.get("endpoints", [])
+comp = [e["inference_id"] for e in eps if e.get("task_type") == "completion"]
+haiku = [e for e in comp if "haiku" in e]
+if comp:
+    print(f"  completion endpoints available ({len(comp)}). Lab 4 will use: "
+          f"{haiku[0] if haiku else comp[0]}")
+else:
+    print("  WARNING: no completion-task endpoints found — Lab 4 COMPLETION cells will fail.")
+    print("  Verify the Serverless project provisions completion endpoints.")
+PYEOF
+
+echo "=== Provisioning Lab 4 Agent Builder agent + tool ==="
+# Identical to the DSL track — the tool is already an ES|QL FORK+FUSE hybrid retriever.
+# Idempotent; non-fatal (attendees can run the Lab 4 setup cell themselves).
+cd /root/workshop/agent-builder
+KIBANA_URL="$ES_KIBANA" python3 setup_agent.py 2>&1 || \
+  echo "WARNING: Agent Builder setup did not complete — attendees can run the Lab 4 setup cell instead."
+
+echo "=== Setting up notebooks ==="
+mkdir -p /root/notebooks
+# Copy the ES|QL lab notebooks (4 core + 1 bonus). Jupyter serves the whole dir.
+cp /root/workshop/notebooks-esql/lab1-esql-semantic-search.ipynb /root/notebooks/
+cp /root/workshop/notebooks-esql/lab2-esql-where-vector-breaks.ipynb /root/notebooks/
+cp /root/workshop/notebooks-esql/lab3-esql-hybrid-search.ipynb /root/notebooks/
+cp /root/workshop/notebooks-esql/lab4-esql-rag-pipeline.ipynb /root/notebooks/
+# Bonus Lab 5. Guarded: under `set -euo pipefail` a bare cp of a not-yet-pushed file
+# would abort the WHOLE setup and break Labs 1-4. Skip it instead.
+cp /root/workshop/notebooks-esql/lab5-esql-reranking.ipynb /root/notebooks/ 2>/dev/null || \
+  echo "NOTE: lab5-esql-reranking.ipynb not in repo yet — skipping Lab 5 (bonus)."
+
+echo "=== Starting Jupyter server on :8888 ==="
+# Token and password auth disabled — sandbox is network-isolated.
+nohup jupyter notebook \
+  --ip=0.0.0.0 \
+  --port=8888 \
+  --no-browser \
+  --allow-root \
+  --NotebookApp.token='' \
+  --NotebookApp.password='' \
+  --NotebookApp.allow_origin='*' \
+  --NotebookApp.disable_check_xsrf=True \
+  --ServerApp.token='' \
+  --ServerApp.password='' \
+  --ServerApp.allow_origin='*' \
+  --ServerApp.disable_check_xsrf=True \
+  --notebook-dir=/root/notebooks \
+  >> /var/log/jupyter.log 2>&1 &
+
+echo "=== Health check ==="
+# Wait for Jupyter to bind port 8888 (up to 15s)
+for i in $(seq 1 15); do
+  if curl -sf http://localhost:8888/api >/dev/null 2>&1; then
+    echo "Jupyter ready after ${i}s"
+    break
+  fi
+  sleep 1
+done
+if ! curl -sf http://localhost:8888/api >/dev/null 2>&1; then
+  echo "WARNING: Jupyter did not start — check /var/log/jupyter.log"
+  tail -20 /var/log/jupyter.log || true
+fi
+sleep 3
+DOC_COUNT=$(python3 -c "
+from elasticsearch import Elasticsearch
+import os, sys
+es = Elasticsearch(os.environ['ES_ENDPOINT'], api_key=os.environ['ES_API_KEY'])
+print(es.count(index='aiewf-workshop-docs')['count'])
+")
+if [ "$DOC_COUNT" -eq 0 ]; then
+    echo "ERROR: 0 documents in index — ingest failed. Check output above."
+    exit 1
+fi
+echo "Index: $DOC_COUNT documents OK"
+
+echo "=== Setup complete ==="
+echo "Kibana:  http://kubernetes-vm:30001  (use Discover → ES|QL mode for Labs 1-3 & 5)"
+echo "Jupyter: http://kubernetes-vm:8888 (no auth)"

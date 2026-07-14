@@ -1,0 +1,58 @@
+slug: aiewf-2026-esql-hybrid-search
+# id: intentionally omitted — Instruqt assigns it on the first `instruqt track push`.
+# checksum: intentionally omitted — Instruqt recomputes it on push. (A stale checksum
+#   copied from another track makes `instruqt track push --force` reject.)
+title: 'ES|QL → Hybrid → Do You Even Need a Model?'
+teaser: |
+  Build a production-grade hybrid search pipeline — vector + BM25 + RRF — using only ES|QL,
+  and prove that retrieval quality, not model quality, determines answer quality in RAG.
+description: |
+  The ES|QL edition of "Vector → Hybrid → Do You Even Need a Model?". Every retrieval
+  operation is expressed in ES|QL — Elasticsearch's piped query language — and Labs 1-3 & 5
+  run in Kibana Discover (ES|QL mode); Lab 4 runs in a Python notebook.
+
+  The thesis: in RAG, retrieval quality — not the model — determines answer quality.
+
+  - Lab 1 — Vector Search: run semantic queries with `MATCH` on a `semantic_text` field —
+    embeddings (Jina v5) generated server-side. No client-side embedding code.
+  - Lab 2 — Where Vector Breaks: find the queries that break semantic AND the ones that break
+    BM25, and read the scores (no `explain` needed) to see why neither is safe alone.
+  - Lab 3 — Hybrid Search: fuse BM25 + semantic with `FORK ... | FUSE` (RRF and linear) into
+    one retriever that wins on every query type that broke the others.
+  - Lab 4 — Why It Matters: the entire RAG pipeline — `FORK | FUSE | RERANK | COMPLETION` — as
+    ONE ES|QL query, then prove same model + worse retrieval = worse answer.
+  - Lab 5 (bonus) — Reranking: pointwise vs listwise precision with the `RERANK` command.
+
+  You leave with a reference GitHub repo: shared pre-baked corpus, ingest script, all ES|QL
+  Discover queries, and working Python notebooks for every lab.
+icon: ""
+tags:
+- esql
+- search
+- hybrid-search
+- rag
+- elasticsearch
+- semantic-search
+- ai-search
+- aiewf-2026
+- vector-search
+- rrf
+- fork-fuse
+owner: elastic
+developers:
+- jeff.vestal@elastic.co
+show_timer: true
+idle_timeout: 10800
+timelimit: 10800
+sandbox_preset: managed-elastic-serverless
+lab_config:
+  extend_ttl: 10800
+  sidebar_enabled: true
+  feedback_recap_enabled: true
+  feedback_tab_enabled: false
+  loadingMessages: true
+  theme:
+    name: modern-dark
+  override_challenge_layout: false
+  hideStopButton: false
+enhanced_loading: false
