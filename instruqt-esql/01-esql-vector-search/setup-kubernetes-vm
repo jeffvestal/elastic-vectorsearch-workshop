@@ -40,7 +40,7 @@ pip install 'elasticsearch>=8.17,<9' jupyter requests matplotlib
 python3 -c "import elasticsearch; print('elasticsearch client:', elasticsearch.__version__)"
 
 echo "=== Cloning workshop repo ==="
-git clone --depth=1 https://github.com/jeffvestal/elastic-vectorsearch-workshop.git /root/workshop
+git clone --depth=1 --branch esql-track https://github.com/jeffvestal/elastic-vectorsearch-workshop.git /root/workshop
 
 echo "=== Ingesting corpus ==="
 # Corpus + ingest.py are SHARED with the DSL track (same index aiewf-workshop-docs).
