@@ -1,12 +1,12 @@
 ---
 slug: esql-hybrid-search
-id: REPLACE_CHALLENGE_ID_3
+id: dmstexxcl6wh
 type: challenge
 title: 'Lab 3 — Hybrid in ES|QL: FORK, FUSE, Filtering, Reranking'
-teaser: Fuse BM25 + semantic with FORK | FUSE (RRF and linear) into one retriever that wins
-  on every query type that broke the others.
+teaser: Fuse BM25 + semantic with FORK | FUSE (RRF and linear) into one retriever
+  that wins on every query type that broke the others.
 tabs:
-- id: REPLACE_TAB_DISCOVER_3
+- id: ovhqxtjbulr8
   title: Kibana Discover
   type: service
   hostname: kubernetes-vm
@@ -22,7 +22,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: REPLACE_TAB_NB_3
+- id: lzs5xai4q5tj
   title: Python Notebook
   type: service
   hostname: kubernetes-vm

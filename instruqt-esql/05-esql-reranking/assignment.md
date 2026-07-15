@@ -1,12 +1,12 @@
 ---
 slug: esql-reranking
-id: REPLACE_CHALLENGE_ID_5
+id: dpmk4pe55umf
 type: challenge
 title: 'Lab 5 (Bonus) — Reranking in ES|QL: Precision After Recall'
-teaser: Add a second-stage RERANK on top of FUSE recall. Compare pointwise (Jina v2) vs
-  listwise (Jina v3) by swapping one inference_id.
+teaser: Add a second-stage RERANK on top of FUSE recall. Compare pointwise (Jina v2)
+  vs listwise (Jina v3) by swapping one inference_id.
 tabs:
-- id: REPLACE_TAB_DISCOVER_5
+- id: cnhvf3itkcti
   title: Kibana Discover
   type: service
   hostname: kubernetes-vm
@@ -22,7 +22,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: REPLACE_TAB_NB_5
+- id: 5zalg0gnzba1
   title: Python Notebook
   type: service
   hostname: kubernetes-vm

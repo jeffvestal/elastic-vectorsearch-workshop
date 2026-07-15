@@ -1,12 +1,12 @@
 ---
 slug: esql-where-vector-breaks
-id: REPLACE_CHALLENGE_ID_2
+id: 2hy203rtdof9
 type: challenge
-title: 'Lab 2 — Where Vector Breaks (and Lexical''s Own Gap) — ES|QL'
-teaser: Find the queries that break semantic AND the ones that break BM25. Read the score
-  in ES|QL — no explain needed — to see why neither retriever is safe alone.
+title: Lab 2 — Where Vector Breaks (and Lexical's Own Gap) — ES|QL
+teaser: Find the queries that break semantic AND the ones that break BM25. Read the
+  score in ES|QL — no explain needed — to see why neither retriever is safe alone.
 tabs:
-- id: REPLACE_TAB_DISCOVER_2
+- id: usiwrukmw89t
   title: Kibana Discover
   type: service
   hostname: kubernetes-vm
@@ -22,7 +22,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: REPLACE_TAB_NB_2
+- id: ipezhgle6vae
   title: Python Notebook
   type: service
   hostname: kubernetes-vm

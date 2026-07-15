@@ -1,7 +1,5 @@
 slug: aiewf-2026-esql-hybrid-search
-# id: intentionally omitted — Instruqt assigns it on the first `instruqt track push`.
-# checksum: intentionally omitted — Instruqt recomputes it on push. (A stale checksum
-#   copied from another track makes `instruqt track push --force` reject.)
+id: y6wrxcym6cay
 title: 'Vector Search: Vector, Keyword, and Hybrid Retrieval'
 teaser: |
   Build a production-grade hybrid search pipeline — vector + BM25 + RRF — using only ES|QL,
@@ -33,11 +31,11 @@ tags:
 - rag
 - elasticsearch
 - semantic-search
+- fork-fuse
 - ai-search
 - aiewf-2026
 - vector-search
 - rrf
-- fork-fuse
 owner: elastic
 developers:
 - jeff.vestal@elastic.co
@@ -55,4 +53,5 @@ lab_config:
     name: modern-dark
   override_challenge_layout: false
   hideStopButton: false
+checksum: "16635754433772116498"
 enhanced_loading: false

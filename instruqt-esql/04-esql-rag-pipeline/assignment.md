@@ -1,18 +1,18 @@
 ---
 slug: esql-rag-pipeline
-id: REPLACE_CHALLENGE_ID_4
+id: fcyqazxcbzlu
 type: challenge
 title: 'Lab 4 — Why It Matters: A Whole RAG Pipeline in One ES|QL Query'
-teaser: Express FORK | FUSE | RERANK | COMPLETION as a single ES|QL statement, then prove
-  same model + worse retrieval = worse answer. Finish with a multi-hop agent.
+teaser: Express FORK | FUSE | RERANK | COMPLETION as a single ES|QL statement, then
+  prove same model + worse retrieval = worse answer. Finish with a multi-hop agent.
 tabs:
-- id: REPLACE_TAB_NB_4
+- id: mzx4qxb4x8rp
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
   path: /notebooks/lab4-esql-rag-pipeline.ipynb
   port: 8888
-- id: REPLACE_TAB_DISCOVER_4
+- id: uihj8qdz8x5k
   title: Kibana Discover
   type: service
   hostname: kubernetes-vm
@@ -28,7 +28,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: REPLACE_TAB_AB_4
+- id: usl8miwpbdg0
   title: Agent Builder
   type: service
   hostname: kubernetes-vm

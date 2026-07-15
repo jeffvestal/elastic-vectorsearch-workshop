@@ -1,10 +1,10 @@
 ---
 slug: esql-vector-search
-id: REPLACE_CHALLENGE_ID_1
+id: fufxor700z95
 type: challenge
 title: 'Lab 1 — Vector Search in ES|QL: The Thing Everyone Reaches For'
-teaser: Run your first semantic queries in ES|QL with MATCH on a semantic_text field —
-  embeddings generated server-side by Jina v5 via EIS. No client embedding code.
+teaser: Run your first semantic queries in ES|QL with MATCH on a semantic_text field
+  — embeddings generated server-side by Jina v5 via EIS. No client embedding code.
 notes:
 - type: text
   contents: |
@@ -22,7 +22,7 @@ notes:
 
     **The throughline:** start with RRF, filter for scope, rerank for precision — and remember a better model can't rescue bad retrieval.
 tabs:
-- id: REPLACE_TAB_DISCOVER_1
+- id: kyih8h3oiqjs
   title: Kibana Discover
   type: service
   hostname: kubernetes-vm
@@ -38,7 +38,7 @@ tabs:
     value: 'script-src ''self'' https://kibana.estccdn.com; worker-src blob: ''self'';
       style-src ''unsafe-inline'' ''self'' https://kibana.estccdn.com; style-src-elem
       ''unsafe-inline'' ''self'' https://kibana.estccdn.com'
-- id: REPLACE_TAB_NB_1
+- id: nkngc4r1z9tm
   title: Python Notebook
   type: service
   hostname: kubernetes-vm
