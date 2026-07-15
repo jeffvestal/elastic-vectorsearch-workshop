@@ -8,7 +8,7 @@ teaser: Run your first semantic queries in ES|QL with MATCH on a semantic_text f
 notes:
 - type: text
   contents: |
-    # ES|QL → Hybrid → Do You Even Need a Model?
+    # Vector Search: Vector, Keyword, and Hybrid Retrieval
 
     **The thesis:** in RAG, retrieval quality — not the model — determines answer quality. Over the next two hours you'll build a hybrid retriever in **ES|QL** that wins on every kind of query, then express an entire RAG pipeline as a single ES|QL statement.
 

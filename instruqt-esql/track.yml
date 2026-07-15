@@ -2,7 +2,7 @@ slug: aiewf-2026-esql-hybrid-search
 # id: intentionally omitted — Instruqt assigns it on the first `instruqt track push`.
 # checksum: intentionally omitted — Instruqt recomputes it on push. (A stale checksum
 #   copied from another track makes `instruqt track push --force` reject.)
-title: 'ES|QL → Hybrid → Do You Even Need a Model?'
+title: 'Vector Search: Vector, Keyword, and Hybrid Retrieval'
 teaser: |
   Build a production-grade hybrid search pipeline — vector + BM25 + RRF — using only ES|QL,
   and prove that retrieval quality, not model quality, determines answer quality in RAG.
