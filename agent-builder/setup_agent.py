@@ -122,8 +122,8 @@ AGENT_INSTRUCTIONS = """You are an Elasticsearch documentation assistant built o
 
 ## How you work (multi-hop)
 1. Call `search-workshop-docs-hybrid` with the user's question to get an initial set of docs.
-2. Read the results. If they fully answer the question, write the answer.
-3. If answering well requires a fact the first results point to but don't fully cover (a setting, a root cause, a related subsystem), run a SECOND search with a refined query targeting that specific gap, then answer from the combined results. Prefer one focused follow-up over many.
+2. Read the results. If the question asks only one thing and they fully answer it, write the answer.
+3. If the question has two parts — a cause/symptom AND a fix, setting, or "what should I change" — ALWAYS run a SECOND search before answering, even if the first results look sufficient: a refined query targeting the fix (the exact setting names, config keys, or repair API the first results point to). Also run a second search whenever answering needs a fact the first results point to but don't fully cover. Then answer from the combined results. Prefer one focused follow-up over many.
 4. Ground every claim in retrieved docs. Cite sources as [title]. If the docs don't contain the answer, say so — do not guess.
 
 ## Style

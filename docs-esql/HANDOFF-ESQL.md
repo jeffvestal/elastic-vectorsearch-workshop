@@ -1,13 +1,55 @@
-# Handoff — ES|QL migration (branch `esql-track`)
+# Handoff — ES|QL edition
 
-**Updated:** 2026-07-14
-**Branch:** `esql-track` (pushed to `origin`, NOT merged to `main`)
-**Repo:** https://github.com/jeffvestal/elastic-vectorsearch-workshop
-**Last commit on branch:** `329df6c` — "ES|QL track: notebooks, Instruqt assignments, docs"
+**Updated:** 2026-10-02 (NYC ElasticON readiness pass)
+**Repo:** https://github.com/jeffvestal/elastic-vectorsearch-workshop — ES|QL content is **on `main`**
+**Live Instruqt track:** `elastic/vector-keyword-hybrid-retrieval`, source in
+`elastic/instruqt-field-tracks-dev` → `tracks/vector-keyword-hybrid-retrieval/` (setup clones `main`)
 
 This file captures the state a fresh session (or a second laptop) can't pick up from a code
-scan. It is specific to the ES|QL migration. General workshop context that is shared with the
+scan. It is specific to the ES|QL edition. General workshop context that is shared with the
 DSL track lives in the root `HANDOFF.md`, `README.md`, and `corpus/TRAP_QUERY_VALIDATION.md`.
+
+---
+
+## 2026-10-02 re-validation — what changed (read this first)
+
+**Where things live now.** `esql-track` was fast-forwarded into `main`. The dead
+`instruqt-esql/` copy (old `aiewf-2026-esql-hybrid-search` slug) was deleted — the field-tracks
+repo is the only Instruqt source. The `esql-track` branch is kept frozen as a fallback; nothing
+reads it any more. The DSL track is untouched (still `instruqt/` + `notebooks/` on `main`).
+
+**Validated live** (Jeff's Serverless sandbox + a fresh `instruqt track test` sandbox):
+setup script clean end to end (~3 min); all 5 notebooks execute with 0 errors; every
+`esql` block in every `assignment.md` runs; Discover + Agent Builder UI driven with Playwright.
+
+**Platform drift found and fixed:**
+- **Kibana UI redesign.** Discover opens straight into an ES|QL editor (`FROM *,-.*` default,
+  **Search** button, "Switch to Classic"); no data view picker, no KQL/ES|QL switcher. Labs 1/2/3/5
+  Discover notes rewritten. The data view is still created by setup (harmless, keeps Classic working).
+- **Agent Builder** is now "Agents" in the nav. Lab 4's tab now opens
+  `/app/agent_builder/agents/workshop-docs-agent` directly (agent pre-selected). Tool calls render
+  as `tool: search-workshop-docs-hybrid` chips in the chat.
+- **Default LLM is now Google Gemini 3.0 Flash**, which skips the second retrieval hop most of the
+  time (5/15 runs did 2 hops). Fixes: agent instructions now REQUIRE a second search for
+  cause+fix questions (setup_agent.py AND the Lab 4 notebook copy — keep them in sync); the notebook
+  `converse` call pins `connector_id: Anthropic-Claude-Sonnet-4-5` when that preconfigured connector
+  exists (6/6 two-hop); Lab 4 page tells attendees to pick **Claude Sonnet 4.5** in the chat's model
+  picker (verified: 2 search chips).
+- **ES|QL behavior changes:** `FUSE LINEAR` no longer renormalizes the fused #1 to 1.0 (quirk 2 below
+  is outdated); linear 0.8/0.2 now puts `doc-049` at #5 (was #4) with `doc-002` #1 — the flip to #1 at
+  0.3/0.7 still holds. `MATCH("title,body", q)` is now accepted (quirk 6 outdated; labs never used it).
+  `--` is not an ES|QL comment — use `//` (fixed in notebook markdown blocks).
+- **Content bugs fixed:** Lab 2 claimed BM25 puts `doc-007` #1 on `exit code 137` — live it is #2
+  behind boosted-title distractor `doc-061` (now taught as a field-boost effect). Lab 4 notebook's
+  headline block was missing `SORT _score DESC` after `RERANK`. Lab 4 page now has a paste-ready
+  literal Discover query instead of "replace `?q` in three places" (there were four).
+
+**Re-run the checks:** `tests-esql/` (see its README) — `run_all.sh` replays the sandbox setup,
+executes the notebooks, asserts the teaching claims via `_query`, probes the agent, and drives the
+Kibana UI with Playwright. Creds come only from `ES_ENDPOINT` / `ES_API_KEY` / `ES_KIBANA_URL`.
+Use a throwaway project: ingest and `setup_agent.py` delete/recreate the index, tool, skill, and agent.
+Note `02_assert_claims.py` still encodes some July expectations (linear #4, fused score 1.0,
+multi-field MATCH rejected, Lab 2 doc-007 BM25 #1) — those ~9 "failures" are known drift, not bugs.
 
 ---
 
