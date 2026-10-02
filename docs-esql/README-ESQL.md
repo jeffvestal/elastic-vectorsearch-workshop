@@ -4,7 +4,7 @@ The **ES|QL edition** of "Vector → Hybrid → Do You Even Need a Model?". Same
 
 > **Thesis (unchanged):** *"The model didn't get dumber. The retrieval got worse."* In RAG, retrieval quality — not the model — determines answer quality.
 
-This track **coexists** with the original retriever-DSL track; nothing in `instruqt/`, `notebooks/`, `corpus/`, or `agent-builder/` is modified. The corpus and Agent Builder setup are **shared**.
+This track **coexists** with the original retriever-DSL track (`instruqt/`, `notebooks/`). The corpus and Agent Builder setup are **shared**.
 
 ---
 
@@ -30,35 +30,20 @@ This track **coexists** with the original retriever-DSL track; nothing in `instr
 
 ```
 notebooks-esql/        lab1..lab5 ES|QL notebooks (es.esql.query())
-instruqt-esql/         track.yml + 5 assignment.md + setup-kubernetes-vm
-docs-esql/             this guide, FACILITATOR-ESQL.md, TRAP_QUERY_VALIDATION_ESQL.md
-corpus/                SHARED, unchanged (index aiewf-workshop-docs)
-agent-builder/         SHARED, unchanged (the AB tool is already ES|QL FORK+FUSE)
+docs-esql/             this guide, FACILITATOR-ESQL.md, TRAP_QUERY_VALIDATION_ESQL.md, HANDOFF-ESQL.md
+tests-esql/            automated re-validation harness (setup replay, notebooks, claims, agent, Playwright UI)
+corpus/                SHARED with the DSL track (index aiewf-workshop-docs)
+agent-builder/         SHARED (the AB tool is an ES|QL FORK+FUSE)
 ```
+
+The **Instruqt track** (`track.yml`, 5 `assignment.md`, `setup-kubernetes-vm`) lives in
+`elastic/instruqt-field-tracks-dev` → `tracks/vector-keyword-hybrid-retrieval/` (live slug
+`elastic/vector-keyword-hybrid-retrieval`). The **instructor deck** lives in
+`elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/intro/`.
 
 Two delivery paths (same rule as the DSL track, per `HANDOFF.md`):
-1. **Notebooks + corpus** → `git clone` of `main` at sandbox boot. Push to `main` to update.
-2. **`track.yml` / `assignment.md`** → `instruqt track push --force` **run from `instruqt-esql/`**. GitHub does NOT update these.
-
----
-
-## Deploying the track for the first time (HARD ORDERING)
-
-You **cannot** push placeholder challenge/tab ids. Mint them first:
-
-```
-cd instruqt-esql
-instruqt track create                 # registers the track, assigns the track id
-instruqt challenge create             # ×5 — mints a real challenge id + tab ids per lab
-```
-
-Then, for each `assignment.md`, replace the `REPLACE_CHALLENGE_ID_*` and `REPLACE_TAB_*` placeholders with the ids Instruqt minted, and finally:
-
-```
-instruqt track push --force
-```
-
-The track `id` and `checksum` are intentionally absent from `track.yml` — Instruqt assigns/recomputes both on first push. Do **not** copy them from the DSL track.
+1. **Notebooks + corpus + agent setup** → the sandbox setup script `git clone`s **`main`** of this repo at boot. Push to `main` to update; only *new* sandboxes pick it up.
+2. **`track.yml` / `assignment.md` / setup script** → `instruqt track push --force` run from the field-tracks track directory. GitHub does NOT update these.
 
 ---
 
@@ -68,22 +53,28 @@ A fresh sandbox is required — existing sandboxes don't re-clone. See `TRAP_QUE
 
 1. **Corpus:** `FROM aiewf-workshop-docs | STATS COUNT(*)` → 62.
 2. **Endpoints:** `es.inference.get()` shows `.jina-embeddings-v5-text-small` (text_embedding), `.jina-reranker-v3` + `.jina-reranker-v2-base-multilingual` (rerank), and **`.anthropic-claude-4.5-haiku-completion` (completion — NOT chat_completion)**.
-3. **Data view:** confirm Discover lists `aiewf-workshop-docs` (the boot script creates it via the data-views API — without it, Labs 1–3 & 5 open to an empty Discover).
+3. **Discover:** opens in ES|QL mode; `FROM aiewf-workshop-docs | STATS docs = COUNT(*)` → 62 via the **Search** button. (The boot script still creates an `aiewf-workshop-docs` data view — harmless, and keeps "Switch to Classic" usable.)
 4. **Trap ranks:** run every Lab 1–3 & 5 query in Discover, record actual ranks in `TRAP_QUERY_VALIDATION_ESQL.md`, re-tune the BM25 expression (boost value or `QSTR`) if a trap doesn't reproduce.
 5. **Lab 4 COMPLETION:** run the one-query pipeline end-to-end (good + bad context); confirm a non-empty `answer`; note latency; confirm the Discover peek renders.
-6. **Agent Builder:** `setup_agent.py` ran; converse shows ≥2 retrieval hops.
+6. **Agent Builder:** `setup_agent.py` ran; the Lab 4 tab opens `/app/agent_builder/agents/workshop-docs-agent`; with **Claude Sonnet 4.5** picked in the chat's model picker, the exit-code-137 question shows **two** `tool: search-workshop-docs-hybrid` chips.
+7. **Shortcut:** `tests-esql/run_all.sh` automates 1–6 against any throwaway Serverless project (see its README).
 
 ---
 
 ## Presenter notes
 
-- **Discover orientation is the #1 friction point.** Every Lab 1–3/5 attendee must (a) select the `aiewf-workshop-docs` data view and (b) flip the query bar to **ES|QL** mode. If results look like keyword search or the `_score` column is missing, they forgot `METADATA _score`. Say it out loud at the start of Lab 1.
+- **Discover orientation** is much simpler in the current UI: it opens straight into an ES|QL editor (default `FROM *,-.*`). Attendees select all, paste, click **Search**. If the `_score` column is missing, they dropped `METADATA _score`. If someone sees a classic KQL bar, they switch the language to ES|QL. Say it out loud at the start of Lab 1.
+- **Agent model (Lab 4):** the platform default chat model is now Google Gemini 3.0 Flash, which often stops after one retrieval. Tell the room to pick **Anthropic Claude Sonnet 4.5** in the model picker under the chat box. The notebook's `converse` call pins that connector automatically when it exists.
 - **Lab 2 explain-gap:** "ES|QL has no `explain` tree. We read the score by splitting the match — title-only vs body-only — and comparing. You see *which field drove the match*, no nested JSON." This is arguably a clearer teaching moment than the DSL `explain`. (`SCORE(MATCH(...))` also works live and gives clean per-field score columns — a good bonus if there's time.)
-- **Lab 3 FUSE LINEAR caveat:** ES|QL MinMax normalizes within each FORK branch's candidate set, not globally — the original `8.18 breaking changes` weight-backfire demo does **not** flip under this normalization (the correct doc wins at every weight). The lab now uses `notify me when something goes wrong` (target `doc-049`) instead, which does flip cleanly (0.8/0.2 BM25-lean sinks it to rank 4; 0.3/0.7 semantic-lean restores #1).
+- **Lab 3 FUSE LINEAR caveat:** ES|QL MinMax normalizes within each FORK branch's candidate set, not globally — the original `8.18 breaking changes` weight-backfire demo does **not** flip under this normalization (the correct doc wins at every weight). The lab now uses `notify me when something goes wrong` (target `doc-049`) instead, which does flip cleanly (0.8/0.2 BM25-lean sinks it to rank 5 as of 2026-10; 0.3/0.7 semantic-lean restores #1).
 - **Lab 4:** the wow is "a whole RAG pipeline is now a database query." `COMPLETION` is one LLM call per row — keep `LIMIT 1` before it. The Discover peek will spin for several seconds; that's expected, not a hang. The GOOD-context question is `How does Index Lifecycle Management move data through hot, warm, and cold phases?` — the original SAML question retrieved a troubleshooting doc and collapsed the good/bad contrast.
 - **Lab 5 RERANK:** `RERANK` overwrites `_score` but does **not** reorder rows — always follow it with `SORT _score DESC`, or the reranked scores land on the pre-rerank (RRF) ordering and the demo looks like a no-op.
 
 ---
+
+## Re-validated 2026-10-02
+
+Everything below still holds except: Discover/Agent Builder UI changed (see presenter notes), `FUSE LINEAR` no longer renormalizes the fused top score to 1.0, and Lab 2's BM25 `exit code 137` puts boosted-title `doc-061` #1 with `doc-007` #2 (the lab now teaches that). Details in `HANDOFF-ESQL.md`.
 
 ## Validated on a live cluster (2026-07-01)
 

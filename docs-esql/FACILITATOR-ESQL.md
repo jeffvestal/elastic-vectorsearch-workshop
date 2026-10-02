@@ -1,8 +1,10 @@
 # Facilitator Guide (ES|QL edition) — Spoken Intro & Per-Lab Check-Ins
 
-> **"Vector Isn't Enough: Hybrid Search & Retrieval for AI Engineers" — ES|QL edition**
+> **"Vector Search: Vector, Keyword, and Hybrid Retrieval"** — ES|QL edition (ElasticON NYC, Oct 2026)
 >
-> Same workshop, expressed in ES|QL. Labs 1–3 & 5 run in **Kibana Discover (ES|QL mode)**; Lab 4 is a notebook. Attendees walk self-paced; regroup every ~20–25 min with a short recap.
+> Labs 1–3 & 5 run in **Kibana Discover** (which now opens straight into ES|QL); Lab 4 is a notebook + the Agent Builder chat. Attendees walk self-paced; regroup after each lab with a recap, then brief the next lab from the deck.
+>
+> **Deck:** `elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/intro/index.html` (open locally, arrow keys to advance). It has a brief + recap slide per lab, a "which retriever when" slide, and a troubleshooting backup slide.
 
 ---
 
@@ -23,7 +25,7 @@
 > "Two things every query needs: start with `METADATA _score`, and end with `SORT _score DESC`. Without `METADATA _score`, `MATCH` is just a yes/no filter — no ranking. That one keyword is the difference between a filter and a search."
 
 And the Discover reminder:
-> "In Discover: pick the `aiewf-workshop-docs` data view, and make sure the query bar says **ES|QL** — not KQL, not Lucene. Then paste and Run."
+> "Discover opens with an ES|QL editor and a default `FROM *,-.*` query. Select all, paste the lab's query, click **Search**. The `FROM` line picks the index — no data view to choose."
 
 ---
 
@@ -51,6 +53,9 @@ And the Discover reminder:
 **After Lab 3 — Hybrid Search**
 > "Two commands — `FORK` to run both searches, `FUSE` to combine their rankings — and you had a retriever that wins on every query that broke the others. You measured it with MRR and the heatmap, not vibes. RRF needs zero tuning; linear can match it only if you hand-tune weights that go stale. RRF is your production default."
 
+**Before Lab 4 — the Agent Builder tip (say it out loud)**
+> "When you get to the Agent Builder tab, click the model picker under the chat box and choose **Anthropic Claude Sonnet 4.5**. The default model often stops after one search; Sonnet reliably does the two-hop *cause, then fix* search. Each search shows up as a `tool: search-workshop-docs-hybrid` chip — you're looking for two."
+
 **After Lab 4 — Why It Matters for Agents**
 > "Here's the payoff, and it's wild in ES|QL: `FORK | FUSE | RERANK | COMPLETION` — retrieve, rerank, *and call the LLM* — in a single query. Then same model, same question: good retrieval gave a great answer, bad retrieval gave 'I don't have enough information.' Only the FORK filter changed. Then you ran the *same* retriever as an Agent Builder agent. The framework is swappable; retrieval quality is not."
 
@@ -59,7 +64,7 @@ And the Discover reminder:
 
 ---
 
-## Intro slide
+## Slides
 
-Reuse the DSL track's Elastic-branded intro slide; swap the subtitle to note the ES|QL framing:
-https://docs.google.com/presentation/d/1DOmkvjVbWfYqqDPrYbKyfnx7bV6F187L_PN7b6MkTLY/edit
+Use the HTML deck (see top of this file). The old single Google Slides intro slide from AIEWF
+(https://docs.google.com/presentation/d/1DOmkvjVbWfYqqDPrYbKyfnx7bV6F187L_PN7b6MkTLY/edit) is superseded.

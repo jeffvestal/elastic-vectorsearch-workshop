@@ -1,5 +1,10 @@
 # Trap Query Validation — ES|QL edition
 
+> **2026-10-02 note:** `instruqt-esql/` was removed; the assignments now live in
+> `elastic/instruqt-field-tracks-dev` → `tracks/vector-keyword-hybrid-retrieval/`. Rank drift since
+> July: FUSE LINEAR 0.8/0.2 puts `doc-049` at #5 with `doc-002` #1, and the fused top score is no longer
+> renormalized to 1.0. All other ranks below re-confirmed live. See `HANDOFF-ESQL.md`.
+
 > **STATUS: VALIDATED LIVE** on 2026-07-01 against `vectorsearch-workshop-dev` (Serverless,
 > ES 9.5.0), 62 docs, index `aiewf-workshop-docs`. Every rank below was measured directly —
 > see `docs-esql/README-ESQL.md` and memory `esql-track-validation-findings` for the full

@@ -53,6 +53,12 @@ multi-field MATCH rejected, Lab 2 doc-007 BM25 #1) — those ~9 "failures" are k
 
 ---
 
+# History — July 2026 migration notes (SUPERSEDED)
+
+> Everything below is the original July handoff, kept for context. The branch/placeholder/
+> `instruqt-esql/` deploy steps no longer apply — see the 2026-10-02 section above. The
+> "behavioral quirks" list is still useful, with the 2026-10-02 corrections noted above.
+
 ## Why this branch exists
 
 The ES|QL work was authored and live-validated on the primary laptop but had **never been
