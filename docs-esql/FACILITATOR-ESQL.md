@@ -62,7 +62,7 @@ And the Discover reminder:
 > "Two commands — `FORK` to run both searches, `FUSE` to combine their rankings — and you had a retriever that wins on every query that broke the others. You measured it with MRR and the heatmap, not vibes. RRF needs zero tuning; linear can match it only if you hand-tune weights that go stale. RRF is your production default."
 
 **Before Lab 4 — the Agent Builder tip (say it out loud)**
-> "When you get to the Agent Builder tab, click the model picker under the chat box and choose **Anthropic Claude Sonnet 4.5**. The default model often stops after one search; Sonnet reliably does the two-hop *cause, then fix* search. Each search shows up as a `tool: search-workshop-docs-hybrid` chip — you're looking for two."
+> "In the Agent Builder tab, leave the model as it is — Claude Sonnet 5 is the default. Ask the exit-code-137 question and watch: the agent loads its *Diagnose and Fix* skill, then searches twice — the cause, then the fix. Each search shows up as a `tool: search-workshop-docs-hybrid` chip — you're looking for two."
 
 **After Lab 4 — Why It Matters for Agents**
 > "Here's the payoff, and it's wild in ES|QL: `FORK | FUSE | RERANK | COMPLETION` — retrieve, rerank, *and call the LLM* — in a single query. Then same model, same question: good retrieval gave a great answer, bad retrieval gave 'I don't have enough information.' Only the FORK filter changed. Then you ran the *same* retriever as an Agent Builder agent. The framework is swappable; retrieval quality is not."

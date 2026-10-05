@@ -27,4 +27,4 @@ Status: written and syntax-checked only; the code paths were smoke-tested agains
     python3 -m venv venv && venv/bin/pip install 'elasticsearch>=8.17,<9' jupyter requests matplotlib nbclient nbformat playwright pyyaml
     venv/bin/playwright install chromium
 `05_agent_direct.py`, `06_agent_steps.py`, `07_agent_model_switch.py` are ad-hoc Agent Builder UI probes from the
-2026-10-02 pass (direct agent URL, execution-details panel, switching the chat model to Claude Sonnet 4.5).
+2026-10-02 pass (direct agent URL, execution-details panel, switching the chat model in the picker).

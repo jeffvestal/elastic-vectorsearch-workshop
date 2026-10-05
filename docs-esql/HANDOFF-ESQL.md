@@ -29,12 +29,13 @@ setup script clean end to end (~3 min); all 5 notebooks execute with 0 errors; e
 - **Agent Builder** is now "Agents" in the nav. Lab 4's tab now opens
   `/app/agent_builder/agents/workshop-docs-agent` directly (agent pre-selected). Tool calls render
   as `tool: search-workshop-docs-hybrid` chips in the chat.
-- **Default LLM is now Google Gemini 3.0 Flash**, which skips the second retrieval hop most of the
-  time (5/15 runs did 2 hops). Fixes: agent instructions now REQUIRE a second search for
-  cause+fix questions (setup_agent.py AND the Lab 4 notebook copy — keep them in sync); the notebook
-  `converse` call pins `connector_id: Anthropic-Claude-Sonnet-4-5` when that preconfigured connector
-  exists (6/6 two-hop); Lab 4 page tells attendees to pick **Claude Sonnet 4.5** in the chat's model
-  picker (verified: 2 search chips).
+- **Default LLM varies by project** (Gemini 3.0 Flash on 10-02; Claude Sonnet 5 on fresh Instruqt
+  sandboxes by 10-05). On 10-02 Gemini skipped the second hop 10 of 15 times, so agent instructions now REQUIRE a
+  second search for cause+fix questions (setup_agent.py AND the Lab 4 notebook copy — keep them in sync).
+- **Update 2026-10-05:** Agent Builder now auto-loads the attached *Diagnose and Fix* skill
+  (`load_skill` step), which drives the cause → fix searches. Verified 5/5 two-hop runs each on Gemini
+  3.0 Flash, Claude Sonnet 5 and Claude Sonnet 4.5. So the model no longer matters: the Lab 4 page says
+  leave the default model; the notebook no longer pins a connector.
 - **ES|QL behavior changes:** `FUSE LINEAR` no longer renormalizes the fused #1 to 1.0 (quirk 2 below
   is outdated); linear 0.8/0.2 now puts `doc-049` at #5 (was #4) with `doc-002` #1 — the flip to #1 at
   0.3/0.7 still holds. `MATCH("title,body", q)` is now accepted (quirk 6 outdated; labs never used it).
