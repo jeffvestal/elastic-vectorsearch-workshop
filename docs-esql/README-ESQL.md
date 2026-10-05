@@ -38,8 +38,11 @@ agent-builder/         SHARED (the AB tool is an ES|QL FORK+FUSE)
 
 The **Instruqt track** (`track.yml`, 5 `assignment.md`, `setup-kubernetes-vm`) lives in
 `elastic/instruqt-field-tracks-dev` → `tracks/vector-keyword-hybrid-retrieval/` (live slug
-`elastic/vector-keyword-hybrid-retrieval`). The **instructor deck** lives in
-`elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/intro/`.
+`elastic/vector-keyword-hybrid-retrieval`). The decks live in
+`elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/`:
+
+- `briefing/` is the pre-Lab-1 concept deck. Lab 1's setup fetches it at the `ASSETS_SHA` pinned in that script and serves it on port 5000 as the **Briefing** tab in every lab. To change it, edit `briefing/src/`, run `briefing/build.sh`, push, then repin `ASSETS_SHA` and `instruqt track push`.
+- `intro/` is the between-lab instructor deck.
 
 Two delivery paths (same rule as the DSL track, per `HANDOFF.md`):
 1. **Notebooks + corpus + agent setup** → the sandbox setup script `git clone`s **`main`** of this repo at boot. Push to `main` to update; only *new* sandboxes pick it up.

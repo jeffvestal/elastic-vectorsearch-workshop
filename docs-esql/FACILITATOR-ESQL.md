@@ -4,7 +4,15 @@
 >
 > Labs 1–3 & 5 run in **Kibana Discover** (which now opens straight into ES|QL); Lab 4 is a notebook + the Agent Builder chat. Attendees walk self-paced; regroup after each lab with a recap, then brief the next lab from the deck.
 >
-> **Deck:** `elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/intro/index.html` (open locally, arrow keys to advance). It has a brief + recap slide per lab, a "which retriever when" slide, and a troubleshooting backup slide.
+> **Two decks, both in `elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/`:**
+> 1. **`briefing/`: present first, about 10 minutes, before Lab 1.** A 15-slide concept deck in Dave Erickson's style.
+>    - Topics: words vs meaning, BM25/IDF, embeddings, `semantic_text` + EIS, Flat/HNSW/DiskBBQ, BBQ, scores-don't-mix → RRF, the relevance pyramid, recall → precision, RAG + agents, and MRR.
+>    - Most slides are interactive: click the buttons on the slide. Arrow keys move between slides.
+>    - Slides 03–05, 07 and 10 use real data from the workshop index.
+>    - Attendees have it in the **Briefing** tab of every lab (port 5000).
+>    - Present from your laptop with speaker notes: `cd briefing/src && fslides serve`, then press **N**. Or open `briefing/index.html` and press **N**; the notes are baked in.
+>    - Talk track: `briefing/slides.md`.
+> 2. **`intro/`: the between-lab deck.** It has a brief and a recap slide per lab, a "which retriever when" slide, and a troubleshooting backup slide. Open `intro/index.html` locally and use the arrow keys to advance.
 
 ---
 
@@ -66,5 +74,5 @@ And the Discover reminder:
 
 ## Slides
 
-Use the HTML deck (see top of this file). The old single Google Slides intro slide from AIEWF
+Use the two HTML decks (see top of this file): Briefing first, then the intro deck between labs. The old single Google Slides intro slide from AIEWF
 (https://docs.google.com/presentation/d/1DOmkvjVbWfYqqDPrYbKyfnx7bV6F187L_PN7b6MkTLY/edit) is superseded.
