@@ -5,12 +5,12 @@
 > Labs 1–3 & 5 run in **Kibana Discover** (which now opens straight into ES|QL); Lab 4 is a notebook + the Agent Builder chat. Attendees walk self-paced; regroup after each lab with a recap, then brief the next lab from the deck.
 >
 > **Two decks, both in `elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/`:**
-> 1. **`briefing/`: present first, about 10 minutes, before Lab 1.** A 15-slide concept deck in Dave Erickson's style.
->    - Topics: words vs meaning, BM25/IDF, embeddings, `semantic_text` + EIS, Flat/HNSW/DiskBBQ, BBQ, scores-don't-mix → RRF, the relevance pyramid, recall → precision, RAG + agents, and MRR.
->    - Most slides are interactive: click the buttons on the slide. Arrow keys move between slides.
->    - Slides 03–05, 07 and 10 use real data from the workshop index.
+> 1. **`briefing/`: present first, before Lab 1 (about 12 minutes).** A 19-slide concept deck in the elastic-web style.
+>    - Topics: words vs meaning, BM25/IDF, embeddings, `semantic_text` + EIS, Flat/HNSW/DiskBBQ, BBQ, scores don't mix → RRF, MRR, the relevance pyramid, recall → precision, then the payoff: LLMs only know their training data, the whole RAG pipeline as one ES|QL query, same model with good vs bad retrieval, agents using search as a tool, and "one engine".
+>    - **Space** or **→** steps through each slide's reveals and animations, then moves on. **←** goes back, `#N` deep-links, and **N** toggles speaker notes.
+>    - Slides 03–05, 07, 10 and 15–16 use real data from the workshop index (16 is a live Lab 4 run).
 >    - Attendees have it in the **Briefing** tab of every lab (port 5000).
->    - Present from your laptop with speaker notes: `cd briefing/src && fslides serve`, then press **N**. Or open `briefing/index.html` and press **N**; the notes are baked in.
+>    - Present from your laptop: open `briefing/index.html` in a browser. It's one self-contained file and works offline.
 >    - Talk track: `briefing/slides.md`.
 > 2. **`intro/`: the between-lab deck.** It has a brief and a recap slide per lab, a "which retriever when" slide, and a troubleshooting backup slide. Open `intro/index.html` locally and use the arrow keys to advance.
 

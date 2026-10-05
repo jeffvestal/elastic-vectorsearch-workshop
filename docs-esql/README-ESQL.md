@@ -41,7 +41,7 @@ The **Instruqt track** (`track.yml`, 5 `assignment.md`, `setup-kubernetes-vm`) l
 `elastic/vector-keyword-hybrid-retrieval`). The decks live in
 `elastic/field-workshop-assets-public` → `workshops/vector-keyword-hybrid-retrieval/`:
 
-- `briefing/` is the pre-Lab-1 concept deck. Lab 1's setup fetches it at the `ASSETS_SHA` pinned in that script and serves it on port 5000 as the **Briefing** tab in every lab. To change it, edit `briefing/src/`, run `briefing/build.sh`, push, then repin `ASSETS_SHA` and `instruqt track push`.
+- `briefing/` is the pre-Lab-1 concept deck. Lab 1's setup fetches it at the `ASSETS_SHA` pinned in that script and serves it on port 5000 as the **Briefing** tab in every lab. To change it, edit `briefing/src/slides/` and `briefing/notes/`, run `python3 briefing/build.py`, push, then repin `ASSETS_SHA` and `instruqt track push`. The build output is one self-contained `index.html` that makes no network requests at runtime.
 - `intro/` is the between-lab instructor deck.
 
 Two delivery paths (same rule as the DSL track, per `HANDOFF.md`):
