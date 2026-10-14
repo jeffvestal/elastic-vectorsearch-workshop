@@ -1,6 +1,6 @@
 # Facilitator Guide (ES|QL edition) — Spoken Intro & Per-Lab Check-Ins
 
-> **"Vector Search: Vector, Keyword, and Hybrid Retrieval"** — ES|QL edition (ElasticON NYC, Oct 2026)
+> **"Vector Search: Vector, Keyword, and Hybrid Retrieval"** — ES|QL edition (Elastic{ON}, Oct 2026)
 >
 > Labs 1–3 & 5 run in **Kibana Discover** (which now opens straight into ES|QL); Lab 4 is a notebook + the Agent Builder chat. Attendees walk self-paced; regroup after each lab with a recap, then brief the next lab from the deck.
 >
